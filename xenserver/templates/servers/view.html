@@ -1,0 +1,35 @@
+{% include "fragments/head.html" with nav_active="projects" %}
+    <div class="row-fluid">
+        <div class="span9">
+            <h4>Server details</h4>
+            <p>
+                <strong>Hostname:</strong> {{server.hostname}}
+                <br/>
+                <strong>IP Range:</strong> {{server.subnet}}
+                <br/>
+            </p>
+        </div>
+    </div>
+
+    <div class="row-fluid">
+        <div class="span9">
+            <h4>Virtual machines</h4>
+            <p>
+                <table class="table table-hover table-bordered table-condensed">
+                    <thead><tr><th>VM</th><th>IP</th><th>Memory</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                        {% for vm in vms %}
+                        <tr  {% if vm.status == 'Running' %}class="success"{%else%}class="error"{%endif%}>
+                            <td>{{ vm.name }}</td>
+                            <td>{{ vm.ip }}</td>
+                            <td>{{ vm.memory }} MB</td>
+                            <td>{{ vm.status }}</td>
+                            <td></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </p>
+        </div>
+    </div>
+{% include "fragments/foot.html" %}

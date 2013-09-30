@@ -1,0 +1,37 @@
+{% include "fragments/head.html" with nav_active="home" %}
+
+    {% for server in servers %}
+
+    <div class="row-fluid">
+        <div class="span9">
+            <h4>{{ server.hostname }}</h4>
+            <div class="row-fluid">
+                <div class="span3">Memory utilisation:</div>
+                <div class="span9">
+                    <div class="progress progress-striped">
+                        <div class="bar" style="width: {{server.mem_util}}%;">{{server.mem_used}}MB / {{server.mem_total}}MB</div>
+                    </div>
+                </div>
+            </div>
+            <p>
+                <table class="table table-hover table-bordered table-condensed">
+                    <thead><tr><th>VM</th><th>IP</th><th>Memory</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                        {% for vm in server.vms %}
+                        <tr  {% if vm.status == 'Running' %}class="success"{%else%}class="error"{%endif%}>
+                            <td>{{ vm.name }}</td>
+                            <td>{{ vm.ip }}</td>
+                            <td>{{ vm.memory }} MB</td>
+                            <td>{{ vm.status }}</td>
+                            <td></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </p>
+        </div>
+    </div>
+
+    {%  endfor %}
+
+{% include "fragments/foot.html" %}

@@ -1,0 +1,19 @@
+{% include "fragments/head.html" with nav_active="servers" %}
+
+    <div class="row-fluid">
+        <div class="span9">
+            <h4 style="margin-bottom:10px">{% if server %}Edit Server{% else %}Create Server{% endif %}</h4>
+            <form method="POST" class="form-horizontal">
+                {% csrf_token %}
+                {{form}}
+                <div class="control-group form-actions">
+                    <div class="controls">
+                        <input type="submit" class="btn btn-success" value="{% if server %}Update{% else %}Save{% endif %}">
+                    </div>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+{% include "fragments/foot.html" %}

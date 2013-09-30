@@ -1,0 +1,19 @@
+{% include "fragments/head.html" with nav_active="provision" %}
+
+    <div class="row-fluid">
+        <div class="span9">
+            <h4 style="margin-bottom:10px">Provision VM</h4>
+            <form method="POST" class="form-horizontal">
+                {% csrf_token %}
+                {{form}}
+                <div class="control-group form-actions">
+                    <div class="controls">
+                        <input type="submit" class="btn btn-success" value="Provision">
+                    </div>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+{% include "fragments/foot.html" %}
