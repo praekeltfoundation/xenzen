@@ -16,12 +16,12 @@ from celery.task.control import revoke
 
 @login_required
 def index(request):
-    servers = XenServer.objects.all()
+    servers = XenServer.objects.all().order_by('hostname')
 
     stacks = []
 
     for server in servers:
-        vms = server.xenvm_set.all()
+        vms = server.xenvm_set.all().order_by('name')
 
         used_memory = sum([vm.memory for vm in vms])
         mem_total = server.memory
@@ -62,7 +62,7 @@ def accounts_profile(request):
 @login_required
 def template_index(request):
 
-    templates = Template.objects.all()
+    templates = Template.objects.all().order_by('name')
 
     return render(request, "templates/index.html", {
         'templates': templates
@@ -113,7 +113,7 @@ def template_edit(request, id):
 
 @login_required
 def server_index(request):
-    servers = XenServer.objects.all()
+    servers = XenServer.objects.all().order_by('hostname')
     
     return render(request, "servers/index.html", {
         'servers': servers
@@ -123,7 +123,7 @@ def server_index(request):
 def server_view(request, id):
     server = XenServer.objects.get(id=id)
 
-    vms = server.xenvm_set.all()
+    vms = server.xenvm_set.all().order_by('name')
     used_addresses = [vm.ip for vm in vms if vm.ip]
 
     return render(request, 'servers/view.html', {
