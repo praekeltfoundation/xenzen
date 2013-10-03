@@ -213,7 +213,7 @@ def provision(request):
 
             vmobj = XenVM.objects.create(
                 xsref='',
-                name=name,
+                name=host,
                 status='Provisioning',
                 sockets=template.cores,
                 memory=template.memory,
