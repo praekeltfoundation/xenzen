@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 
-from xenserver.models import XenServer, Template
+from xenserver.models import XenServer, XenVM, Template
 from xenserver import forms, tasks, iputil
 
 import hashlib
@@ -175,8 +175,21 @@ def server_edit(request, id):
     return render(request, 'servers/create_edit.html', d)
 
 @login_required
+def terminate(request, id):
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    vm = XenVM.objects.get(id=id)
+
+    if vm.xsref:
+        tasks.destroy_vm.delay(vm)
+
+        vm.status = 'Terminating'
+
+    return redirect('home')
+
+@login_required
 def provision(request):
-    
     if request.method == "POST":
         form = forms.ProvisionForm(request.POST)
         if form.is_valid():

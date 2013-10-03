@@ -23,7 +23,11 @@
                             <td>{{ vm.ip }}</td>
                             <td>{{ vm.memory }} MB</td>
                             <td>{{ vm.status }}</td>
-                            <td></td>
+                            <td>
+                                <div class="btn-group">
+                                    <a class="btn" href="{% url 'terminate' id=vm.id %}" title="Terminate" onclick="return confirm('Are you sure you wish to terminate {{ vm.name }}?')"><i class="icon-trash"></i></a>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

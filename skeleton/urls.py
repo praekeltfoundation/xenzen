@@ -22,6 +22,8 @@ urlpatterns = patterns('',
     url(r'^preseed/(?P<id>[\w-]+)$', 'xenserver.views.get_preseed', name='get_preseed'),
 
 
+    # API stuff
+    url(r'^terminate/(?P<id>[\w-]+)$', 'xenserver.views.terminate', name='terminate'),
     url(r'^provision/$', 'xenserver.views.provision', name='provision'),
 
     # Authentication
