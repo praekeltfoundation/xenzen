@@ -11,6 +11,13 @@ class XenServer(models.Model):
     cores = models.IntegerField(default=0)
     subnet = models.CharField(max_length=255, blank=True)
 
+    def __unicode__(self):
+        return self.hostname
+
+    def __str__(self):
+        return self.__unicode__().encode('utf-8', 'replace')
+
+
 class XenVM(models.Model):
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=128)
@@ -22,6 +29,12 @@ class XenVM(models.Model):
     ip = models.CharField(max_length=128, blank=True)
 
     xenserver = models.ForeignKey(XenServer, null=True)
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.__unicode__().encode('utf-8', 'replace')
 
     
 class Template(models.Model):
@@ -35,3 +48,8 @@ class Template(models.Model):
     diskspace = models.IntegerField()
     preseed = models.TextField(blank=True)
 
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.__unicode__().encode('utf-8', 'replace')

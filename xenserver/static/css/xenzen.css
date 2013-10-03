@@ -46,3 +46,7 @@ body {
 .usermast {
     padding-top:1em;
 }
+
+.controls textarea {
+    width: 500px;
+}

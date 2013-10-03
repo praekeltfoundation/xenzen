@@ -11,6 +11,7 @@ class XenServerForm(BootstrapModelForm):
             'cores', 'memory'
         )
 
+
 class UserForm(BootstrapModelForm):
     password = forms.CharField(widget=forms.PasswordInput(), initial='')
     class Meta:
@@ -20,17 +21,25 @@ class UserForm(BootstrapModelForm):
             'last_login', 'date_joined', 'groups', 'user_permissions'
         )
 
+
 class ProvisionForm(BootstrapForm):
     hostname = forms.CharField()
-    memory = forms.IntegerField(
-        initial=1024,
-        min_value=1024, max_value=16385,
-        help_text="Memory in MB (between 1024 and 16384)")
+   
+    server = forms.ModelChoiceField(queryset=models.XenServer.objects.all())
 
+    template = forms.ModelChoiceField(queryset=models.Template.objects.all())
+
+
+class TemplateForm(BootstrapModelForm):
     cores = forms.IntegerField(
         initial=2,
         min_value=1, max_value=8,
         help_text="CPU cores (between 1 and 8)")
+
+    memory = forms.IntegerField(
+        initial=1024,
+        min_value=1024, max_value=16385,
+        help_text="Memory in MB (between 1024 and 16384)")
 
     diskspace = forms.IntegerField(
         initial=50, 
@@ -39,16 +48,6 @@ class ProvisionForm(BootstrapForm):
         help_text="Disk space in GB (10..500)"
     )
 
-class TemplateForm(BootstrapForm):
-    memory = forms.IntegerField(
-        initial=1024,
-        min_value=1024, max_value=16385,
-        help_text="Memory in MB (between 1024 and 16384)")
-
-    cores = forms.IntegerField(
-        initial=2,
-        min_value=1, max_value=8,
-        help_text="CPU cores (between 1 and 8)")
-
     class Meta:
         model = models.Template
+

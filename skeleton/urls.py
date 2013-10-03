@@ -19,6 +19,8 @@ urlpatterns = patterns('',
     url(r'^templates/create$', 'xenserver.views.template_create', name='template_create'),
     url(r'^templates/edit/(?P<id>[\w-]+)$', 'xenserver.views.template_edit', name='template_edit'),
 
+    url(r'^preseed/(?P<id>[\w-]+)$', 'xenserver.views.get_preseed', name='get_preseed'),
+
 
     url(r'^provision/$', 'xenserver.views.provision', name='provision'),
 

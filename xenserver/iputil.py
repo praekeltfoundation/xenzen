@@ -43,4 +43,9 @@ def getGateway(subnet):
 
     return iptos(first)
 
+def getNetmask(subnet):
+    b = subnet.strip().split('/')
+    cidr = int(b[1])
+
+    return socket.inet_ntoa(struct.pack('!L', 0xffffffff ^ (1 << 32 - cidr) - 1))
 

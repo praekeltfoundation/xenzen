@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 
@@ -24,6 +25,9 @@ def index(request):
 
         used_memory = sum([vm.memory for vm in vms])
         mem_total = server.memory
+        if not mem_total:
+            # Prevent a divide by zero
+            mem_total = 1 
         mem_util = (used_memory/float(mem_total))*100
 
         stacks.append({
@@ -57,10 +61,12 @@ def accounts_profile(request):
 
 @login_required
 def template_index(request):
+
     templates = Template.objects.all()
+
     return render(request, "templates/index.html", {
         'templates': templates
-    }
+    })
 
 @login_required
 def template_create(request):
@@ -97,7 +103,7 @@ def template_edit(request, id):
             return redirect('template_index')
 
     else:
-        form = forms.XenServerForm(instance=template)
+        form = forms.TemplateForm(instance=template)
     d = {
         'form': form, 
         'template': template
@@ -118,7 +124,6 @@ def server_view(request, id):
     server = XenServer.objects.get(id=id)
 
     vms = server.xenvm_set.all()
-
     used_addresses = [vm.ip for vm in vms if vm.ip]
 
     return render(request, 'servers/view.html', {
@@ -173,7 +178,42 @@ def server_edit(request, id):
 def provision(request):
     
     if request.method == "POST":
-        pass
+        form = forms.ProvisionForm(request.POST)
+        if form.is_valid():
+            provision = form.cleaned_data
+            server = provision['server']
+            template = provision['template']
+            hostname = provision['hostname']
+            host, domain = hostname.split('.', 1)
+
+            # Find the first free IP address
+            vms = server.xenvm_set.all()
+            used_addresses = [vm.ip for vm in vms if vm.ip]
+
+            ip = iputil.firstRemaining(server.subnet, used_addresses)
+            gateway = iputil.getGateway(server.subnet)
+            netmask = iputil.getNetmask(server.subnet)
+
+            # Get a preseed URL
+            url = urlparse.urljoin(request.build_absolute_uri(),
+                reverse('get_preseed', kwargs={'id':template.id}))
+
+            vmobj = XenVM.objects.create(
+                xsref='',
+                name=name,
+                status='Provisioning',
+                sockets=template.cores,
+                memory=template.memory,
+                xenserver=server,
+                ip=ip
+            )
+            vmobj.save()
+
+            # Send provisioning to celery
+            task = tasks.create_vm.delay(
+                server, template, host, domain, ip, netmask, gateway, url)
+
+            return redirect('home')
     else:
         form = forms.ProvisionForm()
 
@@ -181,5 +221,7 @@ def provision(request):
         'form': form
     })
 
+def get_preseed(request, id):
+    template = Template.objects.get(id=id)
 
-
+    return HttpResponse(template.preseed, content_type="text/plain")

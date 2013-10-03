@@ -8,11 +8,14 @@
                 <a href="{% url 'template_create' %}" class="btn btn-success">Add template</a>
                 {% endif %}
                 <table class="table table-hover table-bordered table-condensed">
+                    <thead><tr><th>Template</th><th>ISO</th><th>Memory</th><th>Cores</th><th></th></tr></thead>
                     <tbody>
                         {% for template in templates %}
                         <tr>
-                            <td width="100%"><a href="{% url 'template_view' id=template.id %}">{{ template.name }}</a></td>
+                            <td>{{ template.name }}</td>
                             <td>{{ template.iso }}</td>
+                            <td>{{ template.memory }}</td>
+                            <td>{{ template.cores }}</td>
                             <td>
                                 <div class="btn-group">
                                     <a class="btn" href="{% url 'template_edit' id=template.id %}" title="Edit settings"><i class="icon-edit"></i></a>
