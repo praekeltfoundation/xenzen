@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 
-from xenserver.models import XenServer
+from xenserver.models import XenServer, Template
 from xenserver import forms, tasks, iputil
 
 import hashlib
@@ -56,11 +56,62 @@ def accounts_profile(request):
     })
 
 @login_required
+def template_index(request):
+    templates = Template.objects.all()
+    return render(request, "templates/index.html", {
+        'templates': templates
+    }
+
+@login_required
+def template_create(request):
+    if not request.user.is_superuser:
+        return redirect('template_index')
+
+    if request.method == "POST":
+        form = forms.TemplateForm(request.POST)
+        if form.is_valid():
+            template = form.save(commit=False)
+            template.save()
+            return redirect('template_index')
+
+    else:
+        form = forms.TemplateForm()
+
+    return render(request, 'templates/create_edit.html', {
+        'form': form
+    })
+
+@login_required
+def template_edit(request, id):
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    template = Template.objects.get(id=id)
+    if request.method == "POST":
+        form = forms.TemplateForm(request.POST, instance=template)
+
+        if form.is_valid():
+            template = form.save(commit=False)
+            template.save()
+
+            return redirect('template_index')
+
+    else:
+        form = forms.XenServerForm(instance=template)
+    d = {
+        'form': form, 
+        'template': template
+    }
+
+    return render(request, 'templates/create_edit.html', d)
+
+@login_required
 def server_index(request):
     servers = XenServer.objects.all()
     
-    d = {'servers': servers}
-    return render(request, "servers/index.html", d)
+    return render(request, "servers/index.html", {
+        'servers': servers
+    })
 
 @login_required
 def server_view(request, id):

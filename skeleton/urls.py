@@ -14,6 +14,12 @@ urlpatterns = patterns('',
     url(r'^servers/edit/(?P<id>[\w-]+)$', 'xenserver.views.server_edit', name='server_edit'),
     url(r'^servers/view/(?P<id>[\w-]+)$', 'xenserver.views.server_view', name='server_view'),
 
+    # Templates
+    url(r'^templates/$', 'xenserver.views.template_index', name='template_index'),
+    url(r'^templates/create$', 'xenserver.views.template_create', name='template_create'),
+    url(r'^templates/edit/(?P<id>[\w-]+)$', 'xenserver.views.template_edit', name='template_edit'),
+
+
     url(r'^provision/$', 'xenserver.views.provision', name='provision'),
 
     # Authentication

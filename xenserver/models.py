@@ -24,3 +24,14 @@ class XenVM(models.Model):
     xenserver = models.ForeignKey(XenServer, null=True)
 
     
+class Template(models.Model):
+    name = models.CharField(max_length=255)
+
+    cores = models.IntegerField()
+    memory = models.IntegerField()
+
+    iso = models.CharField(max_length=255)
+
+    diskspace = models.IntegerField()
+    preseed = models.TextField(blank=True)
+

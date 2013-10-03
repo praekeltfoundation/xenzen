@@ -77,7 +77,7 @@ def updateVms():
         session.xenapi.session.logout()
 
 @task()
-def create_vm(xenserver, name, domain, ip, subnet, gateway):
+def create_vm(xenserver, template, name, domain, ip, subnet, gateway):
     session = getSession(xenserver.hostname,
             xenserver.username, xenserver.password)
     storage = session.xenapi.SR.get_all()
@@ -127,6 +127,15 @@ def create_vm(xenserver, name, domain, ip, subnet, gateway):
         "acpi": "1"
     }
 
+    boot_params = "debian-installer/locale=en_ZA.UTF-8 console-setup/layoutcode=us console-setup/ask_detect=false interface=eth0 netcfg/get_hostname=%(name)s netcfg/get_domain=%(domain)s netcfg/disable_autoconfig=true netcfg/get_ipaddress=%(ip)s netcfg/get_netmask=%(subnet)s netcfg/get_gateway=%(gateway)s netcfg/get_nameservers=8.8.8.8 preseed/url=http://puppet.za.prk-host.net/preseed-precise.cfg" % {
+        'ip': ip, 
+        'subnet': subnet, 
+        'gateway': gateway, 
+        'name': name, 
+        'domain': domain
+    },
+
+
     vmprop = {
         'name_label':name,
         'name_description':"",
@@ -164,13 +173,7 @@ def create_vm(xenserver, name, domain, ip, subnet, gateway):
             "linux_template": "true"
         },
         'recommendations':"",
-        'PV_args':"-- quiet console=hvc0 debian-installer/locale=en_ZA.UTF-8 console-setup/layoutcode=us console-setup/ask_detect=false interface=eth0 netcfg/get_hostname=%(name)s netcfg/get_domain=%(domain)s netcfg/disable_autoconfig=true netcfg/get_ipaddress=%(ip)s netcfg/get_netmask=%(subnet)s netcfg/get_gateway=%(gateway)s netcfg/get_nameservers=8.8.8.8 preseed/url=http://puppet.za.prk-host.net/preseed-precise.cfg" % {
-            'ip': ip, 
-            'subnet': subnet, 
-            'gateway': gateway, 
-            'name': name, 
-            'domain': domain
-        },
+        'PV_args':"-- quiet console=hvc0 %s" % boot_params,
         "suspend_SR": local_sr
     }
 
