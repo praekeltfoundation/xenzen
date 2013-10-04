@@ -218,8 +218,10 @@ def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_ur
         'url': preseed_url
     }
 
+    vmname = "%s.%s" % (name, domain)
+
     vmprop = {
-        'name_label': name,
+        'name_label': vmname,
         'name_description': '',
         'user_version': '1',
         'affinity': '',
@@ -276,7 +278,7 @@ def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_ur
     session.xenapi.VIF.create(vif)
 
     vdisk = {
-        'name_label': name + ' 0',
+        'name_label': vmname + ' 0',
         'name_description': '',
         'SR': local_sr,
         'virtual_size': disk_bytes,
