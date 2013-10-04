@@ -143,6 +143,9 @@ def updateServer(xenserver):
     allvms = session.xenapi.host.get_resident_VMs(host)
     session.xenapi.session.logout()
 
+    # Prevent cleaning an unreferenced VM
+    allvms.append('')
+
     # Purge lost VM's 
     lost = XenVM.objects.filter(xenserver=xenserver).exclude(xsref__in=allvms).delete()
 
