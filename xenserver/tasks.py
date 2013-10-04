@@ -75,7 +75,6 @@ def destroy_vm(vm):
 
 @task
 def updateVm(xenserver, vmref):
-    print vmref
     session = getSession(xenserver.hostname,
         xenserver.username, xenserver.password)
 
@@ -123,8 +122,6 @@ def updateVm(xenserver, vmref):
 def updateServer(xenserver):
     session = getSession(xenserver.hostname,
         xenserver.username, xenserver.password)
-
-    print xenserver
 
     # get server info 
     host = session.xenapi.host.get_all()[0]
