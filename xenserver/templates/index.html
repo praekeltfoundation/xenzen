@@ -19,13 +19,19 @@
                     <tbody>
                         {% for vm in server.vms %}
                         <tr  {% if vm.status == 'Running' %}class="success"{%else%}class="error"{%endif%}>
-                            <td>{{ vm.name }}</td>
+                            <td width="100%">{{ vm.name }}</td>
                             <td>{{ vm.ip }}</td>
                             <td>{{ vm.memory }} MB</td>
                             <td>{{ vm.status }}</td>
                             <td>
                                 <div class="btn-group">
-                                    <a class="btn" href="{% url 'terminate' id=vm.id %}" title="Terminate" onclick="return confirm('Are you sure you wish to terminate {{ vm.name }}?')"><i class="icon-trash"></i></a>
+                                    <a class="btn" href="{% url 'reboot_vm' id=vm.id %}" title="Reboot" onclick="return confirm('Are you sure you wish to reboot {{ vm.name }}?')"><i class="icon-refresh"></i></a>
+                                    {% if vm.status == 'Running' %}
+                                    <a class="btn" href="{% url 'stop_vm' id=vm.id %}" title="Stop" onclick="return confirm('Are you sure you wish to stop {{ vm.name }}?')"><i class="icon-stop"></i></a>
+                                    {% else %}
+                                    <a class="btn" href="{% url 'start_vm' id=vm.id %}" title="Start" ><i class="icon-play"></i></a>
+                                    {% endif %}
+                                    <a class="btn" href="{% url 'terminate_vm' id=vm.id %}" title="Terminate" onclick="return confirm('Are you sure you wish to terminate {{ vm.name }}?')"><i class="icon-trash"></i></a>
                                 </div>
                             </td>
                         </tr>

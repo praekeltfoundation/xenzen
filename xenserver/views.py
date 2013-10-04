@@ -175,16 +175,62 @@ def server_edit(request, id):
     return render(request, 'servers/create_edit.html', d)
 
 @login_required
-def terminate(request, id):
+def start_vm(request, id):
     if not request.user.is_superuser:
         return redirect('home')
 
     vm = XenVM.objects.get(id=id)
 
     if vm.xsref:
-        tasks.destroy_vm.delay(vm)
+        vm.status = 'Starting'
+        vm.save()
 
+        tasks.start_vm.delay(vm)
+
+    return redirect('home')
+
+@login_required
+def stop_vm(request, id):
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    vm = XenVM.objects.get(id=id)
+
+    if vm.xsref:
+        vm.status = 'Stopping'
+        vm.save()
+
+        tasks.shutdown_vm.delay(vm)
+
+    return redirect('home')
+
+@login_required
+def reboot_vm(request, id):
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    vm = XenVM.objects.get(id=id)
+
+    if vm.xsref:
+        vm.status = 'Rebooting'
+        vm.save()
+
+        tasks.reboot_vm.delay(vm)
+
+    return redirect('home')
+
+@login_required
+def terminate_vm(request, id):
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    vm = XenVM.objects.get(id=id)
+
+    if vm.xsref:
         vm.status = 'Terminating'
+        vm.save()
+
+        tasks.destroy_vm.delay(vm)
 
     return redirect('home')
 

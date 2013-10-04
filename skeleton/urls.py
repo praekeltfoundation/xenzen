@@ -23,7 +23,10 @@ urlpatterns = patterns('',
 
 
     # API stuff
-    url(r'^terminate/(?P<id>[\w-]+)$', 'xenserver.views.terminate', name='terminate'),
+    url(r'^start_vm/(?P<id>[\w-]+)$', 'xenserver.views.start_vm', name='start_vm'),
+    url(r'^reboot_vm/(?P<id>[\w-]+)$', 'xenserver.views.reboot_vm', name='reboot_vm'),
+    url(r'^stop_vm/(?P<id>[\w-]+)$', 'xenserver.views.stop_vm', name='stop_vm'),
+    url(r'^terminate_vm/(?P<id>[\w-]+)$', 'xenserver.views.terminate_vm', name='terminate_vm'),
     url(r'^provision/$', 'xenserver.views.provision', name='provision'),
 
     # Authentication
