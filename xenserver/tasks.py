@@ -19,10 +19,49 @@ def getVms(session):
     return vms
 
 @task()
+def shutdown_vm(vm):
+    xenserver = vm.xenserver
+    session = getSession(xenserver.hostname,
+        xenserver.username, xenserver.password)
+
+    logger = shutdown_vm.get_logger()
+    logger.info("Stopping %s on %s" % (vm.name, xenserver.hostname))
+
+    session.xenapi.VM.shutdown(vm.xsref)
+    session.xenapi.session.logout()
+
+@task()
+def reboot_vm(vm):
+    xenserver = vm.xenserver
+    session = getSession(xenserver.hostname,
+        xenserver.username, xenserver.password)
+
+    logger = reboot_vm.get_logger()
+    logger.info("Rebooting %s on %s" % (vm.name, xenserver.hostname))
+
+    session.xenapi.VM.hard_reboot(vm.xsref)
+    session.xenapi.session.logout()
+
+@task()
+def start_vm(vm):
+    xenserver = vm.xenserver
+    session = getSession(xenserver.hostname,
+        xenserver.username, xenserver.password)
+
+    logger = start_vm.get_logger()
+    logger.info("Starting %s on %s" % (vm.name, xenserver.hostname))
+
+    session.xenapi.VM.start(vm.xsref, False, True)
+    session.xenapi.session.logout()
+
+@task()
 def destroy_vm(vm):
     xenserver = vm.xenserver
     session = getSession(xenserver.hostname,
         xenserver.username, xenserver.password)
+
+    logger = destroy_vm.get_logger()
+    logger.info("Terminating %s on %s" % (vm.name, xenserver.hostname))
 
     try:
         session.xenapi.VM.hard_shutdown(vm.xsref)
@@ -30,15 +69,63 @@ def destroy_vm(vm):
         pass
 
     session.xenapi.VM.destroy(vm.xsref)
+    session.xenapi.session.logout()
 
     vm.delete()
 
-@task()
+@task
+def updateVm(xenserver, vmref):
+    print vmref
+    session = getSession(xenserver.hostname,
+        xenserver.username, xenserver.password)
+
+    v = session.xenapi.VM.get_record(vmref)
+
+    if (not v['is_a_template']) and (not v['is_control_domain']):
+        try:
+            netip = session.xenapi.VM_guest_metrics.get_record(
+                v['guest_metrics'])['networks']['0/ip']
+        except:
+            netip = ''
+
+        # Done with session
+
+        name = v['name_label']
+
+        try:
+            vmobj = XenVM.objects.get(xenserver=xenserver, name=name)
+            vmobj.name = v['name_label']
+            vmobj.status = v['power_state']
+            vmobj.sockets = int(v['VCPUs_max'])
+            vmobj.memory = int(v['memory_static_max']) / 1048576
+            vmobj.xenserver = xenserver
+            vmobj.xsref = vmref
+
+            if netip:
+                vmobj.ip = netip
+
+        except XenVM.DoesNotExist:
+            vmobj = XenVM.objects.create(
+                xsref=vmref,
+                name=v['name_label'],
+                status=v['power_state'],
+                sockets=int(v['VCPUs_max']),
+                memory=int(v['memory_static_max']) / 1048576,
+                xenserver=xenserver,
+                ip=netip
+            )
+
+        vmobj.save()
+
+    session.xenapi.session.logout()
+
+@task
 def updateServer(xenserver):
     session = getSession(xenserver.hostname,
         xenserver.username, xenserver.password)
 
-    vms_seen = []
+    print xenserver
+
     # get server info 
     host = session.xenapi.host.get_all()[0]
     host_info = session.xenapi.host.get_record(host)
@@ -53,56 +140,19 @@ def updateServer(xenserver):
     xenserver.save()
 
     # List all the VM objects
-    allvms = session.xenapi.VM.get_all()
-
-    for vmref in allvms:
-        v = session.xenapi.VM.get_record(vmref)
-
-        try:
-            netip = session.xenapi.VM_guest_metrics.get_record(
-                v['guest_metrics'])['networks']['0/ip']
-        except:
-            netip = ''
-
-        name = v['name_label']
-
-        if (not v['is_a_template']) and (not v['is_control_domain']):
-            vms_seen.append(vmref)
-
-            try:
-                vmobj = XenVM.objects.get(xenserver=xenserver, name=name)
-                vmobj.name = v['name_label']
-                vmobj.status = v['power_state']
-                vmobj.sockets = int(v['VCPUs_max'])
-                vmobj.memory = int(v['memory_static_max']) / 1048576
-                vmobj.xenserver = xenserver
-                vmobj.xsref = vmref
-
-                if netip:
-                    vmobj.ip = netip
-
-            except XenVM.DoesNotExist:
-                vmobj = XenVM.objects.create(
-                    xsref=vmref,
-                    name=v['name_label'],
-                    status=v['power_state'],
-                    sockets=int(v['VCPUs_max']),
-                    memory=int(v['memory_static_max']) / 1048576,
-                    xenserver=xenserver,
-                    ip=netip
-                )
-
-            vmobj.save()
-
+    allvms = session.xenapi.host.get_resident_VMs(host)
     session.xenapi.session.logout()
 
     # Purge lost VM's 
-    lost = XenVM.objects.filter(xenserver=xenserver).exclude(xsref__in=vms_seen).delete()
+    lost = XenVM.objects.filter(xenserver=xenserver).exclude(xsref__in=allvms).delete()
+
+    # Update all the vm info
+    for vmref in allvms:
+        updateVm.delay(xenserver, vmref)
 
 @task()
 def updateVms():
     servers = XenServer.objects.all()
-
     for xenserver in servers:
         updateServer.delay(xenserver)
 
@@ -279,6 +329,5 @@ def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_ur
     # Boot the VM up
     session.xenapi.VM.start(VM_ref, False, False)
 
-    # Update our VM database
-    updateVms.delay()
+    session.xenapi.session.logout()
 
