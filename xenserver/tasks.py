@@ -1,4 +1,5 @@
 from celery import task
+from uuid import uuid4
 import os
 import sys
 import subprocess
@@ -247,7 +248,7 @@ def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_ur
         'platform': platfrm,
         'PCI_bus': '',
         'other_config': {
-            'mac_seed': '38a679e8-7d36-216e-cf99-a2acd6cee00e',
+            'mac_seed': uuid4(),
             'install-distro': 'debianlike',
             'base_template_name': 'Ubuntu Precise Pangolin 12.04 (64-bit)',
             'install-arch': 'amd64',
