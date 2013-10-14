@@ -248,7 +248,7 @@ def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_ur
         'platform': platfrm,
         'PCI_bus': '',
         'other_config': {
-            'mac_seed': uuid4(),
+            'mac_seed': str(uuid4()),
             'install-distro': 'debianlike',
             'base_template_name': 'Ubuntu Precise Pangolin 12.04 (64-bit)',
             'install-arch': 'amd64',
