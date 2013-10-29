@@ -1,5 +1,33 @@
 {% include "fragments/head.html" with nav_active="home" %}
 
+     <div class="row-fluid">
+        <div class="span9">
+            <h4>System capacity</h4>
+
+            <div class="row-fluid">
+                <div class="span3">Total free memory:</div><div class="span9">{{ global.freemem }} MB</div>
+            </div>
+
+            <div class="row-fluid">
+                <div class="span3">Core contention:</div><div class="span9">{{ global.corecontend }}</div>
+            </div>
+
+            <p>
+                <table class="table table-hover table-bordered table-condensed">
+                    <thead><tr><th>Template</th><th>Capacity</th></tr></thead>
+                    <tbody>
+                        {% for template, count in template_slack %}
+                            <tr>
+                                <td>{{ template.name }}</td>
+                                <td>{{ count }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+             </p>
+        </div>
+    </div>
+
     {% for server in servers %}
 
     <div class="row-fluid">

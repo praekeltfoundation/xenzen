@@ -25,9 +25,12 @@ class UserForm(BootstrapModelForm):
 class ProvisionForm(BootstrapForm):
     hostname = forms.CharField()
    
-    server = forms.ModelChoiceField(queryset=models.XenServer.objects.all().order_by('hostname'))
+    server = forms.ModelChoiceField(
+        queryset=models.XenServer.objects.all().order_by('hostname'), 
+        empty_label='Auto select', required=False)
 
-    template = forms.ModelChoiceField(queryset=models.Template.objects.all().order_by('name'))
+    template = forms.ModelChoiceField(
+        queryset=models.Template.objects.all().order_by('memory'))
 
 
 class TemplateForm(BootstrapModelForm):

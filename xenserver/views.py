@@ -11,14 +11,25 @@ import uuid
 import time
 import random
 import urlparse
+from operator import itemgetter
 
 from celery.task.control import revoke
 
 @login_required
 def index(request):
     servers = XenServer.objects.all().order_by('hostname')
+    templates = Template.objects.all().order_by('-memory')
 
     stacks = []
+
+    slack = {}
+
+    for t in templates:
+        slack[t] = 0
+
+    global_free = 0
+    global_cores = 0 
+    global_vmcores = 0 
 
     for server in servers:
         vms = server.xenvm_set.all().order_by('name')
@@ -29,17 +40,39 @@ def index(request):
             # Prevent a divide by zero
             mem_total = 1 
         mem_util = (used_memory/float(mem_total))*100
+        mem_free = mem_total - used_memory
+
+        vmcores = sum([vm.sockets for vm in vms])
+        xscores = server.cores
+
+        global_cores += xscores
+        global_vmcores += vmcores
+        global_free += mem_free
 
         stacks.append({
             'hostname': server.hostname,
             'vms': vms, 
             'mem_util': mem_util,
             'mem_total': mem_total,
-            'mem_used': used_memory
+            'mem_used': used_memory,
+            'cores': xscores,
+            'coresused': vmcores
         })
 
+        for t in templates:
+            if t.memory < (mem_free - 512):
+                count = (mem_free - 512) / t.memory
+                slack[t] += count
+
     return render(request, "index.html", {
-        'servers': stacks
+        'servers': stacks, 
+        'template_slack': slack.items(),
+        'global': {
+            'cores': global_cores,
+            'freemem': '{:,}'.format(global_free),
+            'vmcores': global_vmcores,
+            'corecontend': '%0.2f' % (global_vmcores/float(global_cores))
+        }
     })
 
 @login_required
@@ -244,6 +277,29 @@ def provision(request):
             template = provision['template']
             hostname = provision['hostname']
             host, domain = hostname.split('.', 1)
+
+            # Server autoselect
+            if not server:
+                servers = XenServer.objects.all().order_by('hostname')
+
+                hosts = []
+
+                for s in servers:
+                    vms = s.xenvm_set.all().order_by('name')
+
+                    used_memory = sum([vm.memory for vm in vms])
+                    used_cores = sum([vm.sockets for vm in vms])
+                    mem_total = s.memory
+                    if not mem_total:
+                        # Prevent a divide by zero
+                        mem_total = 1 
+
+                    free = mem_total - used_memory
+                    if free > (template.memory + 512):
+                        hosts.append((s, free, s.cores - used_cores))
+
+                # Pick the least utilised server
+                server = sorted(hosts, key=itemgetter(2,1))[-1][0]
 
             # Find the first free IP address
             vms = server.xenvm_set.all()
