@@ -95,7 +95,7 @@ def accounts_profile(request):
 @login_required
 def template_index(request):
 
-    templates = Template.objects.all().order_by('name')
+    templates = Template.objects.all().order_by('memory')
 
     return render(request, "templates/index.html", {
         'templates': templates
