@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
+from django.forms import ValidationError
 
 from xenserver.models import XenServer, XenVM, Template
 from xenserver import forms, tasks, iputil
@@ -301,13 +302,21 @@ def provision(request):
                 # Pick the least utilised server
                 server = sorted(hosts, key=itemgetter(2,1))[-1][0]
 
-            # Find the first free IP address
-            vms = server.xenvm_set.all()
-            used_addresses = [vm.ip for vm in vms if vm.ip]
 
-            ip = iputil.firstRemaining(server.subnet, used_addresses)
-            gateway = iputil.getGateway(server.subnet)
-            netmask = iputil.getNetmask(server.subnet)
+            if provision['ipaddress']:
+                cidr = provision['ipaddress']
+                subnet = iputil.getSubnet(cidr)
+
+                ip = cidr.split('/')[0]
+                gateway = iputil.getGateway(subnet)
+                netmask = iputil.getNetmask(subnet)
+            else:
+                # Find the first free IP address
+                vms = server.xenvm_set.all()
+                used_addresses = [vm.ip for vm in vms if vm.ip]
+                ip = iputil.firstRemaining(server.subnet, used_addresses)
+                gateway = iputil.getGateway(server.subnet)
+                netmask = iputil.getNetmask(server.subnet)
 
             # Get a preseed URL
             url = urlparse.urljoin(request.build_absolute_uri(),

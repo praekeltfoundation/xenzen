@@ -23,6 +23,7 @@ def ipcalc(subnet):
 def expandSubnet(subnet):
     ipnl, first, last, cidr = ipcalc(subnet)
 
+    # Don't use the first IP in the subnet, it's usually a gateway
     second = first + 1
 
     iplist = [iptos(i) for i in range(second, last+1)]
@@ -49,3 +50,13 @@ def getNetmask(subnet):
 
     return socket.inet_ntoa(struct.pack('!L', 0xffffffff ^ (1 << 32 - cidr) - 1))
 
+def getSubnet(ip):
+    b = ip.strip().split('/')
+    ip = b[0]
+    cidr = int(b[1])
+
+    ipnl = struct.unpack('!L', socket.inet_aton(ip))[0]
+
+    network = ipnl & (2**cidr-1)<<(32-cidr)
+
+    return '%s/%s' % (iptos(network), cidr)

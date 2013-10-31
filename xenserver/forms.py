@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django import forms
 from bootstrap.forms import BootstrapModelForm, BootstrapForm
 import models
+import re
 
 
 class XenServerForm(BootstrapModelForm):
@@ -32,6 +33,21 @@ class ProvisionForm(BootstrapForm):
     template = forms.ModelChoiceField(
         queryset=models.Template.objects.all().order_by('memory'))
 
+    ipaddress = forms.CharField(required=False, help_text='Leave blank for automatic selection')
+
+    def clean(self):
+        cleaned_data = super(ProvisionForm, self).clean()
+
+        ipre = re.compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])"
+                          "\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|"
+                          "25[0-5])(\/(\d|[1-2]\d|3[0-2]))$")
+
+        if cleaned_data['ipaddress']:
+            if not ipre.match(cleaned_data['ipaddress']):
+                raise forms.ValidationError("Invalid IP address format - "
+                        "please specify CIDR format w.x.y.z/c or leave blank")
+
+        return cleaned_data
 
 class TemplateForm(BootstrapModelForm):
     cores = forms.IntegerField(
