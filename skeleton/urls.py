@@ -7,6 +7,7 @@ admin.autodiscover()
 urlpatterns = patterns('',
     # Index
     url(r'^$', 'xenserver.views.index', name='home'),
+    url(r'^favicon\.ico$', 'django.views.generic.simple.redirect_to', {'url': '/static/images/favicon.ico'})
 
     # Servers
     url(r'^servers/$', 'xenserver.views.server_index', name='server_index'),
