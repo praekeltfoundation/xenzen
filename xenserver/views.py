@@ -29,6 +29,7 @@ def index(request):
         slack[t] = 0
 
     global_free = 0
+    global_total = 0 
     global_cores = 0 
     global_vmcores = 0 
 
@@ -49,6 +50,7 @@ def index(request):
         global_cores += xscores
         global_vmcores += vmcores
         global_free += mem_free
+        global_total += mem_total
 
         stacks.append({
             'hostname': server.hostname,
@@ -71,6 +73,7 @@ def index(request):
         'global': {
             'cores': global_cores,
             'freemem': '{:,}'.format(global_free),
+            'totalmem': '{:,}'.format(global_total),
             'vmcores': global_vmcores,
             'corecontend': '%0.2f' % (global_vmcores/float(global_cores))
         }

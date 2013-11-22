@@ -1,4 +1,5 @@
 from django.conf.urls import patterns, include, url
+from django.views.generic import RedirectView
 
 # Uncomment the next two lines to enable the admin:
 from django.contrib import admin
@@ -7,6 +8,7 @@ admin.autodiscover()
 urlpatterns = patterns('',
     # Index
     url(r'^$', 'xenserver.views.index', name='home'),
+    url(r'^favicon\.ico$', RedirectView.as_view(url='/static/images/favicon.ico')), 
 
     # Servers
     url(r'^servers/$', 'xenserver.views.server_index', name='server_index'),
