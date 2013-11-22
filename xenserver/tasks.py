@@ -146,7 +146,8 @@ def updateServer(xenserver):
         updateVm.delay(xenserver, vmref)
 
     # Prevent cleaning an unreferenced VM
-    allvms.append('')
+    for vm in XenVM.objects.filter(xsref__startswith='TEMPREF'):
+        allvms.append(vm.xsref)
 
     # Purge lost VM's 
     lost = XenVM.objects.filter(xenserver=xenserver).exclude(xsref__in=allvms).delete()

@@ -326,7 +326,7 @@ def provision(request):
                 reverse('get_preseed', kwargs={'id':template.id}))
 
             vmobj = XenVM.objects.create(
-                xsref='',
+                xsref='TEMPREF'+uuid.uuid1().hex,
                 name=hostname,
                 status='Provisioning',
                 sockets=template.cores,
