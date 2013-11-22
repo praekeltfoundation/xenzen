@@ -143,7 +143,7 @@ INSTALLED_APPS = (
     'south',
     'gunicorn',
     'django_nose',
-   # 'raven.contrib.django.raven_compat',
+    'raven.contrib.django.raven_compat',
     'djcelery',
     'djcelery_email',
     #'social_auth',

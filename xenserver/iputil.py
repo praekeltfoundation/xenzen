@@ -23,6 +23,7 @@ def ipcalc(subnet):
 def expandSubnet(subnet):
     ipnl, first, last, cidr = ipcalc(subnet)
 
+
     # Don't use the first IP in the subnet, it's usually a gateway
     second = first + 1
 
