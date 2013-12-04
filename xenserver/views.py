@@ -37,7 +37,7 @@ def index(request):
         vms = server.xenvm_set.all().order_by('name')
 
         used_memory = sum([vm.memory for vm in vms])
-        mem_total = server.memory
+        mem_total = server.memory - 2800
         if not mem_total:
             # Prevent a divide by zero
             mem_total = 1 
@@ -63,8 +63,8 @@ def index(request):
         })
 
         for t in templates:
-            if t.memory < (mem_free - 512):
-                count = (mem_free - 512) / t.memory
+            if t.memory < mem_free:
+                count = mem_free / t.memory
                 slack[t] += count
 
     return render(request, "index.html", {
