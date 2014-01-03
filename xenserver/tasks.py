@@ -91,7 +91,7 @@ def updateVm(xenserver, vmref, vmobj):
 
         try:
             vm = XenVM.objects.get(xenserver=xenserver, name=name)
-            vm.name = vmobj['name_label']
+            vm.name = name
             vm.status = vmobj['power_state']
             vm.sockets = int(vmobj['VCPUs_max'])
             vm.memory = int(vmobj['memory_static_max']) / 1048576
@@ -104,10 +104,10 @@ def updateVm(xenserver, vmref, vmobj):
         except XenVM.DoesNotExist:
             vm = XenVM.objects.create(
                 xsref=vmref,
-                name=v['name_label'],
-                status=v['power_state'],
-                sockets=int(v['VCPUs_max']),
-                memory=int(v['memory_static_max']) / 1048576,
+                name=name,
+                status=vmobj['power_state'],
+                sockets=int(vmobj['VCPUs_max']),
+                memory=int(vmobj['memory_static_max']) / 1048576,
                 xenserver=xenserver,
                 ip=netip
             )
