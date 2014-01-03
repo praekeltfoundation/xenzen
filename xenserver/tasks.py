@@ -75,37 +75,34 @@ def destroy_vm(vm):
     vm.delete()
 
 @task
-def updateVm(xenserver, vmref):
-    session = getSession(xenserver.hostname,
-        xenserver.username, xenserver.password)
-
-    v = session.xenapi.VM.get_record(vmref)
-
-    if (not v['is_a_template']) and (not v['is_control_domain']):
+def updateVm(xenserver, vmref, vmobj):
+    if (not vmobj['is_a_template']) and (not vmobj['is_control_domain']):
         try:
+            session = getSession(xenserver.hostname,
+                xenserver.username, xenserver.password)
             netip = session.xenapi.VM_guest_metrics.get_record(
-                v['guest_metrics'])['networks']['0/ip']
+                        vmobj['guest_metrics']
+                    )['networks']['0/ip']
+            session.xenapi.session.logout()
         except:
             netip = ''
 
-        # Done with session
-
-        name = v['name_label']
+        name = vmobj['name_label']
 
         try:
-            vmobj = XenVM.objects.get(xenserver=xenserver, name=name)
-            vmobj.name = v['name_label']
-            vmobj.status = v['power_state']
-            vmobj.sockets = int(v['VCPUs_max'])
-            vmobj.memory = int(v['memory_static_max']) / 1048576
-            vmobj.xenserver = xenserver
-            vmobj.xsref = vmref
+            vm = XenVM.objects.get(xenserver=xenserver, name=name)
+            vm.name = vmobj['name_label']
+            vm.status = vmobj['power_state']
+            vm.sockets = int(vmobj['VCPUs_max'])
+            vm.memory = int(vmobj['memory_static_max']) / 1048576
+            vm.xenserver = xenserver
+            vm.xsref = vmref
 
             if netip:
-                vmobj.ip = netip
+                vm.ip = netip
 
         except XenVM.DoesNotExist:
-            vmobj = XenVM.objects.create(
+            vm = XenVM.objects.create(
                 xsref=vmref,
                 name=v['name_label'],
                 status=v['power_state'],
@@ -115,9 +112,7 @@ def updateVm(xenserver, vmref):
                 ip=netip
             )
 
-        vmobj.save()
-
-    session.xenapi.session.logout()
+        vm.save()
 
 @task
 def updateServer(xenserver):
@@ -139,18 +134,21 @@ def updateServer(xenserver):
 
     # List all the VM objects
     allvms = session.xenapi.host.get_resident_VMs(host)
+    allvms = session.xenapi.VM.get_all_records()
+    vmrefs = allvms.keys()
+
     session.xenapi.session.logout()
 
     # Update all the vm info
-    for vmref in allvms:
-        updateVm.delay(xenserver, vmref)
+    for vmref, vmobj in allvms.items():
+        updateVm.delay(xenserver, vmref, vmobj)
 
     # Prevent cleaning an unreferenced VM
     for vm in XenVM.objects.filter(xsref__startswith='TEMPREF'):
-        allvms.append(vm.xsref)
+        vmrefs.append(vm.xsref)
 
     # Purge lost VM's 
-    lost = XenVM.objects.filter(xenserver=xenserver).exclude(xsref__in=allvms).delete()
+    lost = XenVM.objects.filter(xenserver=xenserver).exclude(xsref__in=vmrefs).delete()
 
 @task()
 def updateVms():

@@ -28,10 +28,10 @@ def index(request):
     for t in templates:
         slack[t] = 0
 
-    global_free = 0
-    global_total = 0 
-    global_cores = 0 
-    global_vmcores = 0 
+    global_free = 1
+    global_total = 1
+    global_cores = 1
+    global_vmcores = 1
 
     for server in servers:
         vms = server.xenvm_set.all().order_by('name')
