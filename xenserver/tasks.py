@@ -64,10 +64,20 @@ def destroy_vm(vm):
     logger = destroy_vm.get_logger()
     logger.info("Terminating %s on %s" % (vm.name, xenserver.hostname))
 
+    vmobj = session.xenapi.VM.get_record(vm.xsref)
+
     try:
         session.xenapi.VM.hard_shutdown(vm.xsref)
     except:
         pass
+
+    # Get attached VBDs and destroy any attached disk VDIs
+    vbds = vmobj['VBDs']
+    for vbref in vbds:
+        vbd = session.xenapi.VBD.get_record(vbref)
+        if vbd['type'] == 'Disk':
+            vdi = vbd['VDI']
+            session.xenapi.VDI.destroy(vdi)
 
     session.xenapi.VM.destroy(vm.xsref)
     session.xenapi.session.logout()
@@ -133,7 +143,7 @@ def updateServer(xenserver):
     xenserver.save()
 
     # List all the VM objects
-    allvms = session.xenapi.host.get_resident_VMs(host)
+    #allvms = session.xenapi.host.get_resident_VMs(host)
     allvms = session.xenapi.VM.get_all_records()
     vmrefs = allvms.keys()
 
