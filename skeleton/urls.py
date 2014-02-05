@@ -8,7 +8,7 @@ admin.autodiscover()
 urlpatterns = patterns('',
     # Index
     url(r'^$', 'xenserver.views.index', name='home'),
-    url(r'^favicon\.ico$', RedirectView.as_view(url='/static/images/favicon.ico')), 
+    url(r'^favicon\.ico$', RedirectView.as_view(url='/static/images/favicon.ico')),
 
     # Servers
     url(r'^servers/$', 'xenserver.views.server_index', name='server_index'),
@@ -35,6 +35,7 @@ urlpatterns = patterns('',
     url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}),
     url(r'^accounts/logout/$', 'django.contrib.auth.views.logout', {'next_page': '/'}, name='auth_logout'),
     url(r'^accounts/profile/$', 'xenserver.views.accounts_profile', name='accounts_profile'),
+    url(r'^logs/$', 'xenserver.views.log_index', name='logs'),
 
     #url(r'', include('social_auth.urls')),
 
