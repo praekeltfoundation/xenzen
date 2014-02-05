@@ -47,6 +47,13 @@ class ProvisionForm(BootstrapForm):
                 raise forms.ValidationError("Invalid IP address format - "
                         "please specify CIDR format w.x.y.z/c or leave blank")
 
+        if cleaned_data['hostname']:
+            hsclean = cleaned_data['hostname'].strip()
+            if not '.' in hsclean:
+                raise forms.ValidationError("Not a valid FQDN.")
+
+            cleaned_data['hostname'] = hsclean
+
         return cleaned_data
 
 class TemplateForm(BootstrapModelForm):
