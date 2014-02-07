@@ -299,11 +299,11 @@ def provision(request):
                         mem_total = 1 
 
                     free = mem_total - used_memory
-                    if free > (template.memory + 512):
+                    if free > (template.memory + 2800):
                         hosts.append((s, free, s.cores - used_cores))
 
                 # Pick the least utilised server
-                server = sorted(hosts, key=itemgetter(2,1))[-1][0]
+                server = sorted(hosts, key=itemgetter(2,1))[0][0]
 
 
             if provision['ipaddress']:
