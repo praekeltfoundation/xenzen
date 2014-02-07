@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.forms import ValidationError
 
-from xenserver.models import XenServer, XenVM, Template
+from xenserver.models import XenServer, XenVM, Template, AuditLog
 from xenserver import forms, tasks, iputil
 
 import hashlib
@@ -15,6 +15,12 @@ import urlparse
 from operator import itemgetter
 
 from celery.task.control import revoke
+
+
+def log_action(user, severity, message):
+    log = AuditLog.objects.create(username=user, severity=severity, 
+        message=message)
+    log.save()
 
 @login_required
 def index(request):
@@ -97,6 +103,14 @@ def accounts_profile(request):
     })
 
 @login_required
+def log_index(request):
+    logs = AuditLog.objects.all().order_by('-time')
+
+    return render(request, "log_index.html", {
+        'logs': logs
+    })
+
+@login_required
 def template_index(request):
 
     templates = Template.objects.all().order_by('memory')
@@ -115,6 +129,7 @@ def template_create(request):
         if form.is_valid():
             template = form.save(commit=False)
             template.save()
+            log_action(request.user, 3, "Created template %s" % template.name)
             return redirect('template_index')
 
     else:
@@ -136,6 +151,8 @@ def template_edit(request, id):
         if form.is_valid():
             template = form.save(commit=False)
             template.save()
+
+            log_action(request.user, 3, "Edit template %s" % template.name)
 
             return redirect('template_index')
 
@@ -178,6 +195,8 @@ def server_create(request):
         if form.is_valid():
             server = form.save(commit=False)
             server.save()
+
+            log_action(request.user, 3, "Added server %s" % server.hostname)
             return redirect('server_index')
 
     else:
@@ -200,6 +219,7 @@ def server_edit(request, id):
             server = form.save(commit=False)
             server.save()
 
+            log_action(request.user, 3, "Edited server %s" % server.hostname)
             return redirect('server_index')
 
     else:
@@ -224,6 +244,11 @@ def start_vm(request, id):
 
         tasks.start_vm.delay(vm)
 
+        log_action(request.user, 3, "Started VM %s on %s" % (
+            vm.name,
+            vm.xenserver.hostname
+        ))
+
     return redirect('home')
 
 @login_required
@@ -238,6 +263,11 @@ def stop_vm(request, id):
         vm.save()
 
         tasks.shutdown_vm.delay(vm)
+
+        log_action(request.user, 3, "Shutdown VM %s on %s" % (
+            vm.name,
+            vm.xenserver.hostname
+        ))
 
     return redirect('home')
 
@@ -254,6 +284,11 @@ def reboot_vm(request, id):
 
         tasks.reboot_vm.delay(vm)
 
+        log_action(request.user, 3, "Rebooted VM %s on %s" % (
+            vm.name,
+            vm.xenserver.hostname
+        ))
+
     return redirect('home')
 
 @login_required
@@ -268,6 +303,10 @@ def terminate_vm(request, id):
         vm.save()
 
         tasks.destroy_vm.delay(vm)
+        log_action(request.user, 3, "Terminated VM %s on %s" % (
+            vm.name,
+            vm.xenserver.hostname
+        ))
 
     return redirect('home')
 
@@ -339,6 +378,11 @@ def provision(request):
             # Send provisioning to celery
             task = tasks.create_vm.delay(
                 server, template, host, domain, ip, netmask, gateway, url)
+
+            log_action(request.user, 3, "Provisioned VM %s on %s" % (
+                hostname,
+                server.hostname
+            ))
 
             return redirect('home')
     else:

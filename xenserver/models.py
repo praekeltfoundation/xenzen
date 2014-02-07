@@ -53,3 +53,11 @@ class Template(models.Model):
 
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
+
+class AuditLog(models.Model):
+    username = models.ForeignKey(User, null=True)
+
+    time = models.DateTimeField(auto_now_add=True)
+
+    severity = models.IntegerField()
+    message = models.TextField()
