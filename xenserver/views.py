@@ -186,7 +186,28 @@ def zone_index(request):
 
 @login_required
 def zone_edit(request, id):
-    pass
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    zone = Zone.objects.get(id=id)
+
+    if request.method == "POST":
+        form = forms.ZoneForm(request.POST, instance=zone)
+
+        if form.is_valid():
+            zone = form.save(commit=False)
+            zone.save()
+
+            log_action(request.user, 3, "Edited zone %s" % zone.name)
+            return redirect('zone_index')
+
+    else:
+        form = forms.ZoneForm(instance=zone)
+
+    return render(request, 'zones/create_edit.html', {
+        'form': form, 
+        'zone': zone
+    })
 
 @login_required
 def zone_create(request):
@@ -196,7 +217,7 @@ def zone_create(request):
     if request.method == "POST":
         form = forms.ZoneForm(request.POST)
         if form.is_valid():
-            zone = form.save()
+            zone = form.save(commit=False)
             zone.save()
 
             log_action(request.user, 2, "Created zone %s" % zone.name)

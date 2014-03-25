@@ -1,7 +1,7 @@
 {% include "fragments/head.html" with nav_active="zones" %}
 
     <div class="row-fluid">
-        <div class="span9">
+        <div class="span12">
             <h4>Zones</h4>
             <p>
                 {% if user.is_superuser %}
@@ -13,7 +13,7 @@
                         {% for zone in zones %}
                         <tr>
                             <td><a href="{%url 'zone_view' id=zone.id %}">{{ zone.name }}</a></td>
-                            <td>
+                            <td width="1em">
                                 <div class="btn-group">
                                     <a class="btn" href="{% url 'zone_edit' id=zone.id %}" title="Edit settings"><i class="icon-edit"></i></a>
                                 </div>
