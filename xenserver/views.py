@@ -53,12 +53,10 @@ def server_index(request):
         vms = server.xenvm_set.all().order_by('name')
 
         used_memory = sum([vm.memory for vm in vms])
-        mem_total = server.memory - 2800
-        if not mem_total:
-            # Prevent a divide by zero
-            mem_total = 1 
-        mem_util = (used_memory/float(mem_total))*100
-        mem_free = mem_total - used_memory
+        mem_total = server.memory
+        mem_free = server.mem_free
+        mem_used = mem_total - mem_free
+        mem_util = (mem_used/float(mem_total))*100
 
         vmcores = sum([vm.sockets for vm in vms])
         xscores = server.cores
@@ -74,9 +72,10 @@ def server_index(request):
             'vms': vms, 
             'mem_util': mem_util,
             'mem_total': mem_total,
-            'mem_used': used_memory,
+            'mem_used': mem_used,
             'cores': xscores,
-            'coresused': vmcores
+            'coresused': vmcores,
+            'cpu_util': server.cpu_util
         })
 
         for t in templates:
@@ -399,22 +398,14 @@ def provision(request):
                 hosts = []
 
                 for s in servers:
-                    vms = s.xenvm_set.all().order_by('name')
-
-                    used_memory = sum([vm.memory for vm in vms])
-                    used_cores = sum([vm.sockets for vm in vms])
                     mem_total = s.memory
-                    if not mem_total:
-                        # Prevent a divide by zero
-                        mem_total = 1 
+                    mem_free = s.mem_free
+                    
+                    if mem_free > template.memory:
+                        hosts.append((s, mem_free))
 
-                    free = mem_total - used_memory
-                    if free > (template.memory + 2800):
-                        hosts.append((s, free, s.cores - used_cores))
-
-                # Pick the least utilised server
-                server = sorted(hosts, key=itemgetter(2,1))[0][0]
-
+                # Pick the smallest free slot
+                server = sorted(hosts, key=itemgetter(1))[0][0]
 
             if provision['ipaddress']:
                 cidr = provision['ipaddress']
