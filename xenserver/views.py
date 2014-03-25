@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.forms import ValidationError
 
-from xenserver.models import XenServer, XenVM, Template, AuditLog
+from xenserver.models import XenServer, XenVM, Template, AuditLog, Zone
 from xenserver import forms, tasks, iputil
 
 import hashlib
@@ -166,6 +166,48 @@ def template_edit(request, id):
     return render(request, 'templates/create_edit.html', d)
 
 @login_required
+def zone_index(request):
+    zones = Zone.objects.all().order_by('name')
+
+    return render(request, "zones/index.html", {
+        'zones': zones
+    })
+
+@login_required
+def zone_edit(request, id):
+    pass
+
+@login_required
+def zone_create(request):
+    if not request.user.is_superuser:
+        return redirect('index')
+
+    if request.method == "POST":
+        form = forms.ZoneForm(request.POST)
+        if form.is_valid():
+            zone = form.save()
+            zone.save()
+
+            log_action(request.user, 2, "Created zone %s" % zone.name)
+            return redirect('zone_index')
+    else:
+        form = forms.ZoneForm()
+
+    return render(request, 'zones/create_edit.html', {
+        'form': form
+    })
+
+@login_required
+def zone_view(request, id):
+    zone = Zone.objects.get(id=id)
+    servers = XenServer.objects.filter(zone=zone).order_by('hostname')
+
+    return render(request, "zones/view.html", {
+        'servers': servers,
+        'zone': zone
+    })
+
+@login_required
 def server_index(request):
     servers = XenServer.objects.all().order_by('hostname')
     
@@ -317,13 +359,17 @@ def provision(request):
         if form.is_valid():
             provision = form.cleaned_data
             server = provision['server']
+            zone = provision['zone']
             template = provision['template']
             hostname = provision['hostname']
             host, domain = hostname.split('.', 1)
 
             # Server autoselect
             if not server:
-                servers = XenServer.objects.all().order_by('hostname')
+                if zone:
+                    servers = XenServer.objects.filter(zone=zone).order_by('hostname')
+                else:
+                    servers = XenServer.objects.all().order_by('hostname')
 
                 hosts = []
 

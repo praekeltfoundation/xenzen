@@ -10,6 +10,12 @@ urlpatterns = patterns('',
     url(r'^$', 'xenserver.views.index', name='home'),
     url(r'^favicon\.ico$', RedirectView.as_view(url='/static/images/favicon.ico')),
 
+    # Zones
+    url(r'^zones/$', 'xenserver.views.zone_index', name='zone_index'),
+    url(r'^zones/create$', 'xenserver.views.zone_create', name='zone_create'),
+    url(r'^zones/edit/(?P<id>[\w-]+)$', 'xenserver.views.zone_edit', name='zone_edit'),
+    url(r'^zones/view/(?P<id>[\w-]+)$', 'xenserver.views.zone_view', name='zone_view'),
+
     # Servers
     url(r'^servers/$', 'xenserver.views.server_index', name='server_index'),
     url(r'^servers/create$', 'xenserver.views.server_create', name='server_create'),

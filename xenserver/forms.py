@@ -23,9 +23,19 @@ class UserForm(BootstrapModelForm):
         )
 
 
+class ZoneForm(BootstrapModelForm):
+    
+    class Meta:
+        model = models.Zone
+
+
 class ProvisionForm(BootstrapForm):
     hostname = forms.CharField()
    
+    zone = forms.ModelChoiceField(
+        queryset=models.Zone.objects.all().order_by('name'), 
+        empty_label='Anywhere', required=False)
+
     server = forms.ModelChoiceField(
         queryset=models.XenServer.objects.all().order_by('hostname'), 
         empty_label='Auto select', required=False)

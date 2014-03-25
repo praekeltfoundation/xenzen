@@ -2,6 +2,16 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class Zone(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.__unicode().encode('utf-8', 'replace')
+
+
 class XenServer(models.Model):
     hostname = models.CharField(max_length=255, unique=True)
     username = models.CharField(max_length=255)
@@ -10,6 +20,8 @@ class XenServer(models.Model):
     memory = models.IntegerField(default=0)
     cores = models.IntegerField(default=0)
     subnet = models.CharField(max_length=255, blank=True)
+
+    zone = models.ForeignKey(Zone)
 
     def __unicode__(self):
         return self.hostname

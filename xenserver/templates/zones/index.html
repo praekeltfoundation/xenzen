@@ -1,0 +1,29 @@
+{% include "fragments/head.html" with nav_active="zones" %}
+
+    <div class="row-fluid">
+        <div class="span9">
+            <h4>Zones</h4>
+            <p>
+                {% if user.is_superuser %}
+                <a href="{% url 'zone_create' %}" class="btn btn-success">Add zone</a>
+                {% endif %}
+                <table class="table table-hover table-bordered table-condensed">
+                    <thead><tr><th>Zone</th><th></th></tr></thead>
+                    <tbody>
+                        {% for zone in zones %}
+                        <tr>
+                            <td><a href="{%url 'zone_view' id=zone.id %}">{{ zone.name }}</a></td>
+                            <td>
+                                <div class="btn-group">
+                                    <a class="btn" href="{% url 'zone_edit' id=zone.id %}" title="Edit settings"><i class="icon-edit"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </p>
+        </div>
+    </div>
+
+{% include "fragments/foot.html" %}
