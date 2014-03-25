@@ -24,6 +24,16 @@ def log_action(user, severity, message):
 
 @login_required
 def index(request):
+    vms = XenVM.objects.all().order_by('name')
+
+
+    return render(request, "index.html", {
+        'vms': vms
+    })
+
+@login_required
+def server_index(request):
+
     servers = XenServer.objects.all().order_by('hostname')
     templates = Template.objects.all().order_by('-memory')
 
@@ -59,6 +69,7 @@ def index(request):
         global_total += mem_total
 
         stacks.append({
+            'id': server.id,
             'hostname': server.hostname,
             'vms': vms, 
             'mem_util': mem_util,
@@ -73,7 +84,7 @@ def index(request):
                 count = mem_free / t.memory
                 slack[t] += count
 
-    return render(request, "index.html", {
+    return render(request, "servers/index.html", {
         'servers': stacks, 
         'template_slack': slack.items(),
         'global': {
@@ -207,13 +218,6 @@ def zone_view(request, id):
         'zone': zone
     })
 
-@login_required
-def server_index(request):
-    servers = XenServer.objects.all().order_by('hostname')
-    
-    return render(request, "servers/index.html", {
-        'servers': servers
-    })
 
 @login_required
 def server_view(request, id):
