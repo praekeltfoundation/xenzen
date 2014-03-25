@@ -17,8 +17,10 @@ class XenServer(models.Model):
     username = models.CharField(max_length=255)
     password = models.CharField(max_length=255)
 
-    memory = models.IntegerField(default=0)
-    cores = models.IntegerField(default=0)
+    memory = models.IntegerField(default=1)
+    mem_free = models.IntegerField(default=1)
+    cpu_util = models.IntegerField(default=1)
+    cores = models.IntegerField(default=1)
     subnet = models.CharField(max_length=255, blank=True)
 
     zone = models.ForeignKey(Zone)

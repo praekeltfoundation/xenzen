@@ -1,9 +1,15 @@
-from celery import task
-from uuid import uuid4
 import os
 import sys
 import subprocess
 import xenapi
+import lxml
+import time
+import urllib2
+
+from lxml import etree
+from uuid import uuid4
+
+from celery import task
 
 from xenserver.models import XenServer, XenVM
 
@@ -15,9 +21,39 @@ def getSession(hostname, username, password):
 
     return session
 
-def getVms(session):
+def getHostMetrics(session, hostname):
+    t = time.time()-86400
 
-    return vms
+    uri = 'http://%s/rrd_updates?session_id=%s&start=%s&host=true' % (
+        hostname, session._session, int(t))
+
+    u = urllib2.urlopen(uri)
+
+    tree = etree.parse(u)
+
+    rows = tree.xpath('/xport/data/row')
+
+    legend = tree.xpath('/xport/meta/legend/entry')
+
+    items = {}
+    keys = []
+
+    for i,l in enumerate(legend):
+        key = l.text
+        items[key] = []
+        keys.append(key)
+
+    cpu_all=[]
+
+    for r in rows:
+        values = r.xpath('v')
+        for i,v in enumerate(values):
+            k = keys[i]
+            cf, rt, oid, key = k.split(':')
+            if rt=='host' and key!='cpu_avg' and key.startswith('cpu'):
+                cpu_all.append(float(v.text))
+
+    return int((sum(cpu_all)/len(cpu_all))*100)
 
 @task()
 def shutdown_vm(vm):
@@ -136,9 +172,15 @@ def updateServer(xenserver):
 
     xenserver.cores = cores
 
-    metrics = session.xenapi.host.get_metrics(host)
-    memory = session.xenapi.host_metrics.get_record(metrics)['memory_total']
+    metrics = session.xenapi.host_metrics.get_record(
+        session.xenapi.host.get_metrics(host)
+    )
+    memory = metrics['memory_total']
+    mem_free = metrics['memory_free']
+
     xenserver.memory = int(memory) / 1048576
+    xenserver.mem_free = int(mem_free) / 1048576
+    xenserver.cpu_util = getHostMetrics(session, xenserver.hostname)
 
     xenserver.save()
 

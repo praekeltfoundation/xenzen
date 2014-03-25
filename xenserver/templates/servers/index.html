@@ -35,13 +35,19 @@
         <div class="span12">
             <h4>Servers</h4>
             <table class="table table-hover table-bordered table-condensed">
+                <thead><tr><th>Hostname</th><th>Memory</th><th>CPU</th><th></th></tr></thead>
                 <tbody>
                     {% for server in servers %}
                     <tr>
                         <td><a href="{% url 'server_view' id=server.id %}">{{ server.hostname }}</a></td>
-                        <td>
+                        <td width="300em">
                             <div class="progress progress-striped">
                                 <div class="bar" style="width: {{server.mem_util}}%;">{{server.mem_used}}MB / {{server.mem_total}}MB</div>
+                            </div>
+                        </td>
+                        <td width="300em">
+                            <div class="progress progress-striped">
+                                <div class="bar" style="width: {{server.cpu_util}}%;">{{server.cpu_util}}%</div>
                             </div>
                         </td>
                         <td width="1em">
