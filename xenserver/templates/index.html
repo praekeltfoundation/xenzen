@@ -4,7 +4,7 @@
         <div class="span12">
             <h4>VMs</h4>
             <p>
-                <table class="table table-hover table-bordered table-condensed">
+                <table class="table table-hover table-bordered table-condensed" id="vmlist">
                     <thead><tr><th>VM</th><th>IP</th><th>Memory</th><th>Status</th><th>Placement</th><th></th></tr></thead>
                     <tbody>
                         {% for vm in vms %}
@@ -33,4 +33,29 @@
         </div>
     </div>
 
-{% include "fragments/foot.html" %}
+    <hr>
+  <div class="footer">
+  </div>
+</div>
+
+   
+    <script src="/static/js/jquery.js"></script>
+    <script src="/static/bootstrap/js/bootstrap.js"></script>
+    <script src="/static/js/jquery.dataTables.min.js"></script>
+    <script>
+
+                $.extend( $.fn.dataTableExt.oStdClasses, {
+                    "sWrapper": "dataTables_wrapper form-inline"
+                } );
+
+                $('#vmlist').dataTable( {
+                        "bPaginate": false,
+                        "sDom": "<'row-fluid'<'span8'l><'span4'f>r>t<'row-fluid'<'span9'i><'span3'p>>",
+                        "oLanguage": {
+                                "sLengthMenu": "_MENU_ records per page"
+                        }
+                } );
+    </script>
+  </body>
+</html>
+
