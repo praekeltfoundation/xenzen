@@ -44,17 +44,18 @@
     <script src="/static/js/jquery.dataTables.min.js"></script>
     <script>
 
-                $.extend( $.fn.dataTableExt.oStdClasses, {
-                    "sWrapper": "dataTables_wrapper form-inline"
-                } );
+        $.extend( $.fn.dataTableExt.oStdClasses, {
+            "sWrapper": "dataTables_wrapper form-inline"
+        } );
 
-                $('#vmlist').dataTable( {
-                        "bPaginate": false,
-                        "sDom": "<'row-fluid'<'span8'l><'span4'f>r>t<'row-fluid'<'span9'i><'span3'p>>",
-                        "oLanguage": {
-                                "sLengthMenu": "_MENU_ records per page"
-                        }
-                } );
+        $('#vmlist').dataTable( {
+            "bPaginate": false,
+            "sDom": "<'row-fluid'<'span8'l><'span4'f>r>t<'row-fluid'<'span9'i><'span3'p>>",
+            "aoColumns": [
+                null, null, null, null, null,
+                { "bSortable": false }
+            ]
+        } );
     </script>
   </body>
 </html>
