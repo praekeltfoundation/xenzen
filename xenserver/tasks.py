@@ -51,6 +51,8 @@ def getHostMetrics(session, hostname):
             k = keys[i]
             cf, rt, oid, key = k.split(':')
             if rt=='host' and key!='cpu_avg' and key.startswith('cpu'):
+                if v.text == 'NaN':
+                    continue
                 cpu_all.append(float(v.text))
 
     return int((sum(cpu_all)/len(cpu_all))*100)
@@ -180,7 +182,11 @@ def updateServer(xenserver):
 
     xenserver.memory = int(memory) / 1048576
     xenserver.mem_free = int(mem_free) / 1048576
-    xenserver.cpu_util = getHostMetrics(session, xenserver.hostname)
+
+    try:
+        xenserver.cpu_util = getHostMetrics(session, xenserver.hostname)
+    except:
+        xenserver.cpu_util = 0
 
     xenserver.save()
 
