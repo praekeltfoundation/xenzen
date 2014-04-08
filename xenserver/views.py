@@ -395,17 +395,28 @@ def provision(request):
                 else:
                     servers = XenServer.objects.all().order_by('hostname')
 
-                hosts = []
+                slots = {}
 
                 for s in servers:
                     mem_total = s.memory
                     mem_free = s.mem_free
+
+                    xvms = XenVM.objects.filter(xenserver=s).exclude(status='Running')
+                    for vm in xvms:
+                        mem_free -= vm.memory
                     
                     if mem_free > template.memory:
-                        hosts.append((s, mem_free))
+                        slot = int(mem_free/1024.0)
 
-                # Pick the smallest free slot
-                server = sorted(hosts, key=itemgetter(1))[0][0]
+                        if not slot in slots:
+                            slots[slot] = []
+
+                        slots[slot].append((s, s.cpu_util))
+
+                memory_space = sorted(slots.keys())[0]
+                cpu_space = sorted(slots[memory_space], key = itemgetter(1))[0]
+
+                server = cpu_space[0]
 
             if provision['ipaddress']:
                 cidr = provision['ipaddress']
