@@ -6,6 +6,7 @@
     <li {% if active == "provision" %}class="active"{% endif %}>
       <a href="{% url 'provision' %}">Provision</a>
     </li>
+    {% if user.is_superuser %}
     <li {% if active == "servers" %}class="active"{% endif %}>
       <a href="{% url 'server_index' %}">Servers</a>
     </li>
@@ -15,5 +16,6 @@
     <li {% if active == "templates" %}class="active"{% endif %}>
       <a href="{% url 'template_index' %}">Templates</a>
     </li>
+    {% endif %}
   </ul>
 </div>

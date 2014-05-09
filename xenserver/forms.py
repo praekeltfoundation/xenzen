@@ -46,7 +46,11 @@ class GroupForm(BaseModelForm):
 
 class ProvisionForm(BaseForm):
     hostname = forms.CharField()
-   
+
+    group = forms.ModelChoiceField(
+        queryset=models.Project.objects.all().order_by('name'), 
+        empty_label='Default', required=False)
+
     zone = forms.ModelChoiceField(
         queryset=models.Zone.objects.all().order_by('name'), 
         empty_label='Anywhere', required=False)
