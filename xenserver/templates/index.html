@@ -10,6 +10,7 @@
 <br/><br/>
 
 <div class="panel-group col-lg-12" id="accordion">
+  {% if vms %}
   <div class="panel panel-default">
     <div class="panel-heading">
       <h4 class="panel-title electric">
@@ -66,7 +67,7 @@
       </div>
     </div>
   </div>
-
+  {% endif %}
   {% for project in projects %}
   <div class="panel panel-default">
     <div class="panel-heading">
