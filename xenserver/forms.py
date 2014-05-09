@@ -49,7 +49,7 @@ class ProvisionForm(BaseForm):
 
     group = forms.ModelChoiceField(
         queryset=models.Project.objects.all().order_by('name'), 
-        empty_label='Default', required=False)
+        required=True)
 
     zone = forms.ModelChoiceField(
         queryset=models.Zone.objects.all().order_by('name'), 

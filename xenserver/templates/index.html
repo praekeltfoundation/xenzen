@@ -6,6 +6,10 @@
 
 
 {% block content %}
+{% if error == 'tmpl1' %}
+    <div class="alert alert-danger">Insufficient resources in group</div>
+{% endif %}
+
 <a href="{% url 'group_create' %}" class="btn btn-info">Create group</a>
 <br/><br/>
 

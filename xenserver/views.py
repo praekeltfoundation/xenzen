@@ -1,18 +1,19 @@
-from django.shortcuts import render, redirect
-from django.http import HttpResponse
-from django.contrib.auth.decorators import login_required
-from django.core.urlresolvers import reverse
-from django.forms import CheckboxSelectMultiple
-
-from xenserver.models import XenServer, XenVM, Template, AuditLog, Zone, Project
-from xenserver import forms, tasks, iputil
-
 import hashlib
 import uuid
 import time
 import random
 import urlparse
 from operator import itemgetter
+
+from django.shortcuts import render, redirect
+from django.http import HttpResponse, HttpResponseRedirect
+from django.contrib.auth.decorators import login_required
+from django.core.urlresolvers import reverse
+from django.forms import CheckboxSelectMultiple, ValidationError
+from django.db.models import Sum
+
+from xenserver.models import XenServer, XenVM, Template, AuditLog, Zone, Project
+from xenserver import forms, tasks, iputil
 
 from celery.task.control import revoke
 
@@ -24,6 +25,7 @@ def log_action(user, severity, message):
 
 @login_required
 def index(request):
+
     if not request.user.is_superuser:
         projects = Project.objects.filter(administrators=request.user).order_by('name')
         vms = None
@@ -31,9 +33,11 @@ def index(request):
         vms = XenVM.objects.filter(project=None).order_by('name')
         projects = Project.objects.all().order_by('name')
 
+    error = request.GET.get('error')
     return render(request, "index.html", {
         'projects': projects,
-        'vms': vms
+        'vms': vms,
+        'error': error
     })
 
 @login_required
@@ -465,6 +469,25 @@ def provision(request):
             hostname = provision['hostname']
             host, domain = hostname.split('.', 1)
 
+            if provision['group']:
+                group = provision['group']
+                if not request.user.is_superuser:
+                    if group not in request.user.project_set.all():
+                        raise ValidationError("Invalid group")
+
+                    n_mem = template.memory + group.xenvm_set.all(
+                        ).aggregate(Sum('memory'))['memory__sum']
+                    n_cores = template.cores + group.xenvm_set.all(
+                        ).aggregate(Sum('sockets'))['sockets__sum']
+
+                    if (n_mem > group.max_memory) or (n_cores > group.max_cores):
+                        return HttpResponseRedirect('/?error=tmpl1')
+                        
+            else:
+                if not request.user.is_superuser:
+                    raise ValidationError("Invalid group")
+                group = None
+
             # Server autoselect
             if not server:
                 if zone:
@@ -521,6 +544,7 @@ def provision(request):
                 sockets=template.cores,
                 memory=template.memory,
                 xenserver=server,
+                project=group,
                 ip=ip
             )
             vmobj.save()
@@ -540,9 +564,6 @@ def provision(request):
         if not request.user.is_superuser:
             form.fields['group'].queryset = Project.objects.filter(
                 administrators=request.user).order_by('name')
-
-            form.fields['group'].required=True
-            form.fields['group'].empty_label='----'
 
     return render(request, 'provision.html', {
         'form': form
