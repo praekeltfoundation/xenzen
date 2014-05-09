@@ -234,6 +234,8 @@ SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/accounts/profile/'
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
+SESSION_COOKIE_AGE = 1209600
+
 try:
     from local_settings import *
 except ImportError:
