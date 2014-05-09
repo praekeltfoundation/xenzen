@@ -216,3 +216,7 @@ ul.dropdown-menu a{
 .panel-group .panel {
    overflow: visible;
 }
+
+.navbar-right {
+    padding-top:7px;
+}
