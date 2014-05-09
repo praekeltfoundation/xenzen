@@ -148,7 +148,7 @@ INSTALLED_APPS = (
     'djcelery_email',
     #'social_auth',
     'debug_toolbar',
-    'bootstrap',
+    'crispy_forms',
     'xenserver',
 )
 
@@ -224,6 +224,7 @@ SOUTH_TESTS_MIGRATE = False  # Do not run the migrations for our tests.
 
 LOGIN_REDIRECT_URL = '/'
 SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/accounts/profile/'
+CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
 try:
     from local_settings import *

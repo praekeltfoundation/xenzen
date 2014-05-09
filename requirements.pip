@@ -13,8 +13,8 @@ django-debug-toolbar
 django-celery
 django-celery-email
 django-social-auth
+django-crispy-forms
 pep8
 pyflakes
 pyyaml
 lxml
--e git+git://github.com/earle/django-bootstrap.git#egg=bootstrap
