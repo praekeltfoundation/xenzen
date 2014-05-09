@@ -212,3 +212,7 @@ ul.dropdown-menu a{
     background:#333;
     color: #fff;
 }
+
+.panel-group .panel {
+   overflow: visible;
+}
