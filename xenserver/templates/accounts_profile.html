@@ -1,20 +1,11 @@
-{% include "fragments/head.html" %}
+{% extends "fragments/default.html" %}
+{% load crispy_forms_tags %}
 
-    <div class="row-fluid">
-        <div class="span9">
-            <h4>Account settings: {{user.username}}</h4>
-            <p>
-                <form method="POST" class="form-horizontal">
-                    {% csrf_token %}
-                    {{form}}
-                    <div class="control-group form-actions">
-                        <div class="controls">
-                            <input type="submit" class="btn btn-success" value="Save">
-                        </div>
-                    </div>
-                </form>
-            </p>
-        </div>
-    </div>
+{% block navbar %}
+{% include "fragments/navbar.html" with active="servers" %}
+{% endblock %}
 
-{% include "fragments/foot.html" %}
+{% block content %}
+    <h4>Account settings: {{user.username}}</h4>
+    {% crispy form %}
+{% endblock %}

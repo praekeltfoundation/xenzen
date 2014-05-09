@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.forms import ValidationError
 
-from xenserver.models import XenServer, XenVM, Template, AuditLog, Zone
+from xenserver.models import XenServer, XenVM, Template, AuditLog, Zone, Project
 from xenserver import forms, tasks, iputil
 
 import hashlib
@@ -24,10 +24,11 @@ def log_action(user, severity, message):
 
 @login_required
 def index(request):
-    vms = XenVM.objects.all().order_by('name')
-
+    vms = XenVM.objects.filter(project=None).order_by('name')
+    projects = Project.objects.all().order_by('name')
 
     return render(request, "index.html", {
+        'projects': projects,
         'vms': vms
     })
 
@@ -94,6 +95,39 @@ def server_index(request):
             'corecontend': '%0.2f' % (global_vmcores/float(global_cores))
         }
     })
+
+@login_required
+def group_create(request):
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    if request.method == "POST":
+        form = forms.GroupForm(request.POST)
+        if form.is_valid():
+            group = form.save(commit=False)
+            group.save()
+            log_action(request.user, 3, "Created project group %s" % group.name)
+            return redirect('home')
+
+    else:
+        form = forms.GroupForm()
+
+    return render(request, 'group_create.html', {
+        'form': form
+    })
+
+@login_required
+def group_move(request, vm, group):
+    vm_obj = XenVM.objects.get(id=vm)
+    if int(group) > 0:
+        group_obj = Project.objects.get(id=group)
+        vm_obj.project = group_obj
+    else:
+        vm_obj.project = None
+
+    vm_obj.save()
+
+    return redirect('home')
 
 @login_required
 def accounts_profile(request):

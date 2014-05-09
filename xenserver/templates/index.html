@@ -1,62 +1,160 @@
-{% include "fragments/head.html" with nav_active="home" %}
+{% extends "fragments/default.html" %}
 
-    <div class="row-fluid">
-        <div class="span12">
-            <h4>VMs</h4>
-            <p>
-                <table class="table table-hover table-bordered table-condensed" id="vmlist">
-                    <thead><tr><th>VM</th><th>IP</th><th>Memory</th><th>Status</th><th>Placement</th><th></th></tr></thead>
-                    <tbody>
-                        {% for vm in vms %}
-                        <tr  {% if vm.status == 'Running' %}class="success"{%else%}class="error"{%endif%}>
-                            <td >{{ vm.name }}</td>
-                            <td>{{ vm.ip }}</td>
-                            <td>{{ vm.memory }} MB</td>
-                            <td>{{ vm.status }}</td>
-                            <td>{{ vm.xenserver.hostname }}</td>
-                            <td width="1em">
-                                <div class="btn-group">
-                                    <a class="btn" href="{% url 'reboot_vm' id=vm.id %}" title="Reboot" onclick="return confirm('Are you sure you wish to reboot {{ vm.name }}?')"><i class="icon-refresh"></i></a>
-                                    {% if vm.status == 'Running' %}
-                                    <a class="btn" href="{% url 'stop_vm' id=vm.id %}" title="Stop" onclick="return confirm('Are you sure you wish to stop {{ vm.name }}?')"><i class="icon-stop"></i></a>
-                                    {% else %}
-                                    <a class="btn" href="{% url 'start_vm' id=vm.id %}" title="Start" ><i class="icon-play"></i></a>
-                                    {% endif %}
-                                    <a class="btn" href="{% url 'terminate_vm' id=vm.id %}" title="Terminate" onclick="return confirm('Are you sure you wish to terminate {{ vm.name }}?')"><i class="icon-trash"></i></a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </p>
-        </div>
+{% block navbar %}
+{% include "fragments/navbar.html" with active="home" %}
+{% endblock %}
+
+
+{% block content %}
+<a href="{% url 'group_create' %}" class="btn btn-info">Create group</a>
+<br/><br/>
+
+<div class="panel-group col-lg-12" id="accordion">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title electric">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapse00">Default</a>
+      </h4>
     </div>
+    <div id="collapse00" class="panel-collapse collapse in">
+      <div class="panel-body">
+        <table class="table table-hover table-bordered table-condensed" id="vmlistdefault">
+            <thead><tr><th>VM</th><th>IP</th><th>Memory</th><th>Status</th><th>Placement</th><th></th></tr></thead>
+            <tbody>
+                {% for vm in vms %}
+                <tr  {% if vm.status == 'Running' %}class="info"{%else%}class="warning"{%endif%}>
+                    <td >{{ vm.name }}</td>
+                    <td>{{ vm.ip }}</td>
+                    <td>{{ vm.memory }} MB</td>
+                    <td>{{ vm.status }}</td>
+                    <td>{{ vm.xenserver.hostname }}</td>
+                    <td width="150em">
+                        <div class="btn-group btn-group-sm">
+                            <a class="btn btn-default" href="{% url 'reboot_vm' id=vm.id %}" title="Reboot" onclick="return confirm('Are you sure you wish to reboot {{ vm.name }}?')">
+                                <span class="glyphicon glyphicon-refresh electric"></span>
+                            </a>
+                            {% if vm.status == 'Running' %}
+                            <a class="btn btn-default" href="{% url 'stop_vm' id=vm.id %}" title="Stop" onclick="return confirm('Are you sure you wish to stop {{ vm.name }}?')">
+                                <span class="glyphicon glyphicon-stop electric"></span>
+                            </a>
+                            {% else %}
+                            <a class="btn btn-default" href="{% url 'start_vm' id=vm.id %}" title="Start" >
+                                <span class="glyphicon glyphicon-play electric"></span>
+                            </a>
+                            {% endif %}
+                            <a class="btn btn-default" href="{% url 'terminate_vm' id=vm.id %}" title="Terminate" onclick="return confirm('Are you sure you wish to terminate {{ vm.name }}?')">
+                                <span class="glyphicon glyphicon-trash electric"></span>
+                            </a>
 
-    <hr>
-  <div class="footer">
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-default dropdown-toggle electric" data-toggle="dropdown">
+                                <span class="glyphicon glyphicon-th"></span><span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu pull-right">
+                                    <li><a href="{% url 'group_move' vm=vm.id group=0%}">Default</a></li>
+                                    {% for project in projects %}
+                                    <li><a href="{% url 'group_move' vm=vm.id group=project.id%}">{{project.name}}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+      </div>
+    </div>
   </div>
+
+  {% for project in projects %}
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title electric">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapse{{project.id}}">{{project.name}}</a>
+      </h4>
+    </div>
+    <div id="collapse{{project.id}}" class="panel-collapse collapse">
+      <div class="panel-body">
+        <table class="table table-hover table-bordered table-condensed" id="vmlist{{project.id}}">
+            <thead><tr><th>VM</th><th>IP</th><th>Memory</th><th>Status</th><th>Placement</th><th></th></tr></thead>
+            <tbody>
+                {% for vm in project.xenvm_set.all %}
+                <tr  {% if vm.status == 'Running' %}class="info"{%else%}class="warning"{%endif%}>
+                    <td >{{ vm.name }}</td>
+                    <td>{{ vm.ip }}</td>
+                    <td>{{ vm.memory }} MB</td>
+                    <td>{{ vm.status }}</td>
+                    <td>{{ vm.xenserver.hostname }}</td>
+                    <td width="150em">
+                        <div class="btn-group btn-group-sm">
+                            <a class="btn btn-default" href="{% url 'reboot_vm' id=vm.id %}" title="Reboot" onclick="return confirm('Are you sure you wish to reboot {{ vm.name }}?')">
+                                <span class="glyphicon glyphicon-refresh electric"></span>
+                            </a>
+                            {% if vm.status == 'Running' %}
+                            <a class="btn btn-default" href="{% url 'stop_vm' id=vm.id %}" title="Stop" onclick="return confirm('Are you sure you wish to stop {{ vm.name }}?')">
+                                <span class="glyphicon glyphicon-stop electric"></span>
+                            </a>
+                            {% else %}
+                            <a class="btn btn-default" href="{% url 'start_vm' id=vm.id %}" title="Start" >
+                                <span class="glyphicon glyphicon-play electric"></span>
+                            </a>
+                            {% endif %}
+                            <a class="btn btn-default" href="{% url 'terminate_vm' id=vm.id %}" title="Terminate" onclick="return confirm('Are you sure you wish to terminate {{ vm.name }}?')">
+                                <span class="glyphicon glyphicon-trash electric"></span>
+                            </a>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-default dropdown-toggle electric" data-toggle="dropdown">
+                                <span class="glyphicon glyphicon-th"></span> <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu pull-right">
+                                    <li><a href="{% url 'group_move' vm=vm.id group=0%}">Default</a></li>
+                                    {% for project in projects %}
+                                    <li><a href="{% url 'group_move' vm=vm.id group=project.id%}">{{project.name}}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
 </div>
+{% endblock %}
 
-   
-    <script src="/static/js/jquery.js"></script>
-    <script src="/static/bootstrap/js/bootstrap.js"></script>
-    <script src="/static/js/jquery.dataTables.min.js"></script>
-    <script>
+{% block script %}
+<script src="/static/js/jquery.dataTables.min.js"></script>
+<script src="/static/js/dataTables.bootstrap.js"></script>
+<script>
 
-        $.extend( $.fn.dataTableExt.oStdClasses, {
-            "sWrapper": "dataTables_wrapper form-inline"
-        } );
+    $.extend( $.fn.dataTableExt.oStdClasses, {
+        "sWrapper": "dataTables_wrapper form-inline"
+    } );
 
-        $('#vmlist').dataTable( {
-            "bPaginate": false,
-            "sDom": "<'row-fluid'<'span8'l><'span4'f>r>t<'row-fluid'<'span9'i><'span3'p>>",
-            "aoColumns": [
-                null, null, null, null, null,
-                { "bSortable": false }
-            ]
-        } );
-    </script>
-  </body>
-</html>
+    $('#vmlistdefault').dataTable( {
+        "bPaginate": false,
+        "sDom": "<'row-fluid'<'span8'l><'span4'f>r>t<'row-fluid'<'span9'i><'span3'p>>",
+        "aoColumns": [
+            null, null, null, null, null,
+            { "bSortable": false }
+        ]
+    } );
 
+    {% for project in projects %}
+    $('#vmlist{{project.id}}').dataTable( {
+        "bPaginate": false,
+        "sDom": "<'row-fluid'<'span8'l><'span4'f>r>t<'row-fluid'<'span9'i><'span3'p>>",
+        "aoColumns": [
+            null, null, null, null, null,
+            { "bSortable": false }
+        ]
+    } );
+    {% endfor %}
+</script>
+{% endblock %}

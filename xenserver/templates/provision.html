@@ -1,19 +1,12 @@
-{% include "fragments/head.html" with nav_active="provision" %}
+{% extends "fragments/default.html" %}
+{% load crispy_forms_tags %}
 
-    <div class="row-fluid">
-        <div class="span9">
-            <h4 style="margin-bottom:10px">Provision VM</h4>
-            <form method="POST" class="form-horizontal">
-                {% csrf_token %}
-                {{form}}
-                <div class="control-group form-actions">
-                    <div class="controls">
-                        <input type="submit" class="btn btn-success" value="Provision">
-                    </div>
-                </div>
-            </form>
+{% block navbar %}
+{% include "fragments/navbar.html" with active="provision" %}
+{% endblock %}
 
-        </div>
-    </div>
+{% block content %}
+    <h4 style="margin-bottom:10px">Provision VM</h4>
+    {% crispy form %}
+{% endblock %}
 
-{% include "fragments/foot.html" %}

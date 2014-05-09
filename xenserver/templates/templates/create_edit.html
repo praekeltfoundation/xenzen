@@ -1,19 +1,12 @@
-{% include "fragments/head.html" with nav_active="templates" %}
+{% extends "fragments/default.html" %}
+{% load crispy_forms_tags %}
 
-    <div class="row-fluid">
-        <div class="span9">
-            <h4 style="margin-bottom:10px">{% if template %}Edit Template{% else %}Create Template{% endif %}</h4>
-            <form method="POST" class="form-horizontal">
-                {% csrf_token %}
-                {{form}}
-                <div class="control-group form-actions">
-                    <div class="controls">
-                        <input type="submit" class="btn btn-success" value="{% if template %}Update{% else %}Save{% endif %}">
-                    </div>
-                </div>
-            </form>
+{% block navbar %}
+{% include "fragments/navbar.html" with active="templates" %}
+{% endblock %}
 
-        </div>
-    </div>
+{% block content %}
+    <h4 style="margin-bottom:10px">{% if template %}Edit Template{% else %}Create Template{% endif %}</h4>
+    {% crispy form %}
 
-{% include "fragments/foot.html" %}
+{% endblock %}

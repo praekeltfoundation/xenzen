@@ -31,6 +31,14 @@ class XenServer(models.Model):
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
 
+class Project(models.Model):
+    name = models.CharField(max_length=255)
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.__unicode__().encode('utf-8', 'replace')
 
 class XenVM(models.Model):
     name = models.CharField(max_length=255)
@@ -43,6 +51,8 @@ class XenVM(models.Model):
     ip = models.CharField(max_length=128, blank=True)
 
     xenserver = models.ForeignKey(XenServer, null=True)
+
+    project = models.ForeignKey(Project, null=True)
 
     def __unicode__(self):
         return self.name

@@ -1,19 +1,33 @@
 from django.contrib.auth.models import User
 from django import forms
-from bootstrap.forms import BootstrapModelForm, BootstrapForm
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Submit
 import models
 import re
 
 
-class XenServerForm(BootstrapModelForm):
+class BaseModelForm(forms.ModelForm):
+    helper = FormHelper()
+    helper.form_class = 'form-horizontal'
+    helper.label_class = 'col-lg-2'
+    helper.field_class = 'col-lg-8'
+    helper.add_input(Submit('submit', 'Submit'))
+
+class BaseForm(forms.Form):
+    helper = FormHelper()
+    helper.form_class = 'form-horizontal'
+    helper.label_class = 'col-lg-2'
+    helper.field_class = 'col-lg-8'
+    helper.add_input(Submit('submit', 'Submit'))
+
+class XenServerForm(BaseModelForm):
     class Meta:
         model = models.XenServer
         exclude = (
             'cores', 'memory'
         )
 
-
-class UserForm(BootstrapModelForm):
+class UserForm(BaseModelForm):
     password = forms.CharField(widget=forms.PasswordInput(), initial='')
     class Meta:
         model = User
@@ -22,14 +36,15 @@ class UserForm(BootstrapModelForm):
             'last_login', 'date_joined', 'groups', 'user_permissions'
         )
 
-
-class ZoneForm(BootstrapModelForm):
-    
+class ZoneForm(BaseModelForm):
     class Meta:
         model = models.Zone
 
+class GroupForm(BaseModelForm):
+    class Meta:
+        model = models.Project
 
-class ProvisionForm(BootstrapForm):
+class ProvisionForm(BaseForm):
     hostname = forms.CharField()
    
     zone = forms.ModelChoiceField(
@@ -66,7 +81,7 @@ class ProvisionForm(BootstrapForm):
 
         return cleaned_data
 
-class TemplateForm(BootstrapModelForm):
+class TemplateForm(BaseModelForm):
     cores = forms.IntegerField(
         initial=2,
         min_value=1, max_value=8,
