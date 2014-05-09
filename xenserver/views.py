@@ -117,6 +117,28 @@ def group_create(request):
     })
 
 @login_required
+def group_edit(request, id):
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    group = Project.objects.get(id=id)
+    if request.method == "POST":
+        form = forms.GroupForm(request.POST, instance=group)
+        if form.is_valid():
+            group = form.save(commit=False)
+            group.save()
+            form.save_m2m()
+            log_action(request.user, 3, "Edited project group %s" % group.name)
+            return redirect('home')
+    else:
+        form = forms.GroupForm(instance=group)
+
+    return render(request, 'group_create.html', {
+        'group': group,
+        'form': form
+    })
+
+@login_required
 def group_move(request, vm, group):
     vm_obj = XenVM.objects.get(id=vm)
     if int(group) > 0:

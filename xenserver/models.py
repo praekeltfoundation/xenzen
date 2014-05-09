@@ -34,6 +34,11 @@ class XenServer(models.Model):
 class Project(models.Model):
     name = models.CharField(max_length=255)
 
+    max_cores = models.IntegerField(default=8)
+    max_memory = models.IntegerField(default=16384)
+
+    administrators = models.ManyToManyField(User, blank=True)
+
     def __unicode__(self):
         return self.name
 

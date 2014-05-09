@@ -13,6 +13,7 @@ urlpatterns = patterns('',
     # Groups
     url(r'^group/create$', 'xenserver.views.group_create', name='group_create'),
     url(r'^group/move/(?P<vm>[\w-]+)/(?P<group>[\w-]+)$', 'xenserver.views.group_move', name='group_move'),
+    url(r'^group/edit/(?P<id>[\w-]+)$', 'xenserver.views.group_edit', name='group_edit'),
 
     # Zones
     url(r'^zones/$', 'xenserver.views.zone_index', name='zone_index'),
