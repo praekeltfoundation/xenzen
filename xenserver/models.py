@@ -49,6 +49,7 @@ class XenVM(models.Model):
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=128)
     xsref = models.CharField(max_length=255, unique=True)
+    uuid = models.CharField(max_length=255)
 
     sockets = models.IntegerField()
     memory = models.IntegerField()
@@ -65,6 +66,11 @@ class XenVM(models.Model):
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
 
+class XenMetrics(models.Model):
+    vm = models.ForeignKey(XenVM)
+    key = models.CharField(max_length=128)
+    timeblob = models.TextField()
+    datablob = models.TextField()
     
 class Template(models.Model):
     name = models.CharField(max_length=255)
