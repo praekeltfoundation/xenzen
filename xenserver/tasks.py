@@ -50,7 +50,7 @@ def getHostMetrics(session, hostname):
 
     for r in rows:
         t = r.xpath('t')[0].text
-        ts.append(t)
+        ts.append(int(t))
 
         values = r.xpath('v')
         for k,v in zip(keys, values):

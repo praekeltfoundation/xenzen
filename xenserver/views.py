@@ -3,6 +3,7 @@ import uuid
 import time
 import random
 import urlparse
+import json
 from operator import itemgetter
 
 from django.shortcuts import render, redirect
@@ -12,7 +13,7 @@ from django.core.urlresolvers import reverse
 from django.forms import CheckboxSelectMultiple, ValidationError
 from django.db.models import Sum
 
-from xenserver.models import XenServer, XenVM, Template, AuditLog, Zone, Project
+from xenserver.models import XenServer, XenVM, Template, AuditLog, Zone, Project, XenMetrics
 from xenserver import forms, tasks, iputil
 
 from celery.task.control import revoke
@@ -38,6 +39,19 @@ def index(request):
         'projects': projects,
         'vms': vms,
         'error': error
+    })
+
+@login_required
+def vm_view(request, id):
+
+    vm = XenVM.objects.get(id=id)
+
+    if not request.user.is_superuser:
+        if vm.project not in request.user.project_set.all():
+            return redirect('home')
+
+    return render(request, "vm/view.html", {
+        'vm': vm
     })
 
 @login_required
@@ -573,3 +587,20 @@ def get_preseed(request, id):
     template = Template.objects.get(id=id)
 
     return HttpResponse(template.preseed, content_type="text/plain")
+
+
+@login_required
+def get_metrics(request, id):
+    vm = XenVM.objects.get(id=id)
+
+    metrics = XenMetrics.objects.filter(vm=vm)
+
+    d = {}
+
+    for m in metrics:
+        t = json.loads(m.timeblob)
+        md = json.loads(m.datablob)
+
+        d[m.key] = [[i*1000, j] for i,j in zip(t, md)]
+
+    return HttpResponse(json.dumps(d), content_type="application/json")

@@ -1,0 +1,105 @@
+{% extends "fragments/default.html" %}
+
+{% block navbar %}
+{% include "fragments/navbar.html" with active="servers" %}
+{% endblock %}
+
+{% block head %}
+<link href="/static/nvd3/nv.d3.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+    <h4>Details</h4>
+    <dl class="dl-horizontal">
+        <dt>Hostname:</dt><dd>{{vm.name}}</dd>
+        <dt>Status:</dt><dd>{{vm.status}}</dd>
+        <dt>IP:</dt><dd>{{vm.ip}}</dd>
+        <dt>Cores:</dt><dd>{{vm.sockets}}</dd>
+        <dt>Memory:</dt><dd>{{vm.memory}}</dd>
+    </dl>
+
+    <h5>CPU Usage</h5>
+    <div id="cpu" ><svg style="height: 300px;"></svg></div>
+
+    <h5>Memory Usage</h5>
+    <div id="memory" ><svg style="height: 300px;"></svg></div>
+{% endblock %}
+
+{% block script %}
+<script src="/static/d3/d3.v3.min.js"></script>
+<script src="/static/nvd3/nv.d3.min.js"></script>
+<script>
+    $.getJSON("{% url 'get_metrics' id=vm.id %}", function(data){
+      var options = {
+        margin: {left: 100},
+        x: function(d) { return d[0]},
+        y: function(d) { return d[1]},
+        showXAxis: true,
+        showYAxis: true,
+        clipEdge: true,
+        transitionDuration: 250
+      }
+
+      nv.addGraph(function() {
+        var chart;
+        chart = nv.models.lineChart().options(options);
+
+        chart.xAxis
+            .showMaxMin(false)
+            .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)) });
+
+        chart.yAxis.axisLabel("MB").tickFormat(d3.format('.2f'));
+
+        var free = data['memory_internal_free'];
+        var total = data['memory'];
+
+        var vals = [];
+        for (var v = 0; v < free.length; v++) {
+            vals.push([total[v][0], (total[v][1]/1024 - free[v][1]) / 1024]);
+        }
+        var cdata = [{
+            values: vals,
+            key: 'Memory used'
+        }];
+
+        d3.select('#memory svg').datum(cdata).transition().duration(500).call(chart);
+        nv.utils.windowResize(function() { d3.select('#memory svg').call(chart) });
+        return chart;
+      });
+
+      nv.addGraph(function() {
+        var chart;
+        chart = nv.models.lineChart().options(options);
+
+        chart.xAxis
+            .showMaxMin(false)
+            .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)) });
+
+        chart.yAxis.axisLabel("%").tickFormat(d3.format('.2f'));;
+
+        var cdata = [];
+
+        for (var i = 0; i < 16; i++) {
+            var d = data['cpu'+i];
+            if (d) {
+                var vals = [];
+                for (var v = 0; v < d.length; v++) {
+                    vals.push([d[v][0], d[v][1]*100]);
+                }
+                cdata.push({
+                    values: vals,
+                    key: 'Core '+i
+                });
+            }
+        }
+
+        d3.select('#cpu svg').datum(cdata).transition().duration(500).call(chart);
+        nv.utils.windowResize(function() { d3.select('#cpu svg').call(chart) });
+        return chart;
+      });
+     
+    });
+
+</script>
+{% endblock %}

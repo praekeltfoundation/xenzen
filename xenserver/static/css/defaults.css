@@ -4,7 +4,7 @@ body {
     padding-top: 50px;
 }
 
-h1, h2, h3, h4 {
+h1, h2, h3, h4, h5 {
     color: #6DBDFF;
 }
 
@@ -220,3 +220,34 @@ ul.dropdown-menu a{
 .navbar-right {
     padding-top:7px;
 }
+
+.nvd3 {
+    stroke: #64AEEC;
+    color: #64AEEC;
+}
+
+.nvd3 .nv-axis line {
+    stroke: #333;
+}
+
+.nvtooltip {
+    background: #333;
+}
+
+.nvtooltip p {
+
+}
+.nvtooltip h3 {
+    font-size: 12px;
+    background: #222;   
+}
+
+.nvd3 .nv-axis path {
+    stroke: #64AEEC;
+}
+
+.nvd3 .nv-axis {
+    stroke: #64AEEC;
+    color: #64AEEC;
+}
+

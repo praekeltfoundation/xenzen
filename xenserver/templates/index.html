@@ -28,7 +28,7 @@
             <tbody>
                 {% for vm in vms %}
                 <tr  {% if vm.status == 'Running' %}class="info"{%else%}class="warning"{%endif%}>
-                    <td >{{ vm.name }}</td>
+                    <td ><a href="{% url 'vm_view' id=vm.id %}">{{ vm.name }}</a></td>
                     <td>{{ vm.ip }}</td>
                     <td>{{ vm.memory }} MB</td>
                     <td>{{ vm.status }}</td>
@@ -91,7 +91,7 @@
             <tbody>
                 {% for vm in project.xenvm_set.all %}
                 <tr  {% if vm.status == 'Running' %}class="info"{%else%}class="warning"{%endif%}>
-                    <td >{{ vm.name }}</td>
+                    <td ><a href="{% url 'vm_view' id=vm.id %}">{{ vm.name }}</a></td>
                     <td>{{ vm.ip }}</td>
                     <td>{{ vm.memory }} MB</td>
                     <td>{{ vm.status }}</td>

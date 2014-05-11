@@ -27,6 +27,9 @@ urlpatterns = patterns('',
     url(r'^servers/edit/(?P<id>[\w-]+)$', 'xenserver.views.server_edit', name='server_edit'),
     url(r'^servers/view/(?P<id>[\w-]+)$', 'xenserver.views.server_view', name='server_view'),
 
+    # VMs
+    url(r'^vm/view/(?P<id>[\w-]+)$', 'xenserver.views.vm_view', name='vm_view'),
+
     # Templates
     url(r'^templates/$', 'xenserver.views.template_index', name='template_index'),
     url(r'^templates/create$', 'xenserver.views.template_create', name='template_create'),
@@ -41,6 +44,8 @@ urlpatterns = patterns('',
     url(r'^stop_vm/(?P<id>[\w-]+)$', 'xenserver.views.stop_vm', name='stop_vm'),
     url(r'^terminate_vm/(?P<id>[\w-]+)$', 'xenserver.views.terminate_vm', name='terminate_vm'),
     url(r'^provision/$', 'xenserver.views.provision', name='provision'),
+
+    url(r'^metrics/(?P<id>[\w-]+)$', 'xenserver.views.get_metrics', name='get_metrics'),
 
     # Authentication
     url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}),
