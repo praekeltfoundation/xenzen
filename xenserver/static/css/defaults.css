@@ -1,6 +1,6 @@
 body {
     background: #111111;
-    color: #ffffff;
+    color: #6DBDFF;
     padding-top: 50px;
 }
 
@@ -69,6 +69,12 @@ label {
 }
 
 .form-control {
+    background: #222222;
+    border-color: #555555;
+    color: #64AEEC;
+}
+
+input {
     background: #222222;
     border-color: #555555;
     color: #64AEEC;
@@ -255,3 +261,5 @@ ul.dropdown-menu a{
 .nvd3 .nv-axis .nv-axisMaxMin text {
     font-weight: normal;
 }
+
+
