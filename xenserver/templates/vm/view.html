@@ -1,7 +1,7 @@
 {% extends "fragments/default.html" %}
 
 {% block navbar %}
-{% include "fragments/navbar.html" with active="servers" %}
+{% include "fragments/navbar.html" with active="home" %}
 {% endblock %}
 
 {% block head %}
@@ -13,17 +13,36 @@
     <h4>Details</h4>
     <dl class="dl-horizontal">
         <dt>Hostname:</dt><dd>{{vm.name}}</dd>
+        <dt>Placement:</dt><dd>{{vm.xenserver.hostname}}</dd>
         <dt>Status:</dt><dd>{{vm.status}}</dd>
         <dt>IP:</dt><dd>{{vm.ip}}</dd>
         <dt>Cores:</dt><dd>{{vm.sockets}}</dd>
         <dt>Memory:</dt><dd>{{vm.memory}}</dd>
     </dl>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <h5>CPU Usage</h5>
+            <div id="cpu" ><svg style="height: 300px;"></svg></div>
+        </div>
 
-    <h5>CPU Usage</h5>
-    <div id="cpu" ><svg style="height: 300px;"></svg></div>
+        <div class="col-md-6">
+            <h5>Memory Usage</h5>
+            <div id="memory" ><svg style="height: 300px;"></svg></div>
+        </div>
+    </div>
 
-    <h5>Memory Usage</h5>
-    <div id="memory" ><svg style="height: 300px;"></svg></div>
+    <div class="row">
+        <div class="col-md-6">
+            <h5>Network</h5>
+            <div id="network" ><svg style="height: 300px;"></svg></div>
+        </div>
+
+        <div class="col-md-6">
+            <h5>Disk</h5>
+            <div id="disk" ><svg style="height: 300px;"></svg></div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block script %}
@@ -32,7 +51,7 @@
 <script>
     $.getJSON("{% url 'get_metrics' id=vm.id %}", function(data){
       var options = {
-        margin: {left: 100},
+        margin: {left: 75},
         x: function(d) { return d[0]},
         y: function(d) { return d[1]},
         showXAxis: true,
@@ -46,11 +65,9 @@
         chart = nv.models.lineChart().options(options);
 
         chart.xAxis
-            .showMaxMin(false)
             .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)) });
 
         chart.yAxis.axisLabel("MB").tickFormat(d3.format('.2f'));
-
         var free = data['memory_internal_free'];
         var total = data['memory'];
 
@@ -73,7 +90,78 @@
         chart = nv.models.lineChart().options(options);
 
         chart.xAxis
-            .showMaxMin(false)
+            .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)) });
+
+        chart.yAxis.axisLabel("").tickFormat(function(d) {
+            var sizes = ['', 'K', 'M', 'G'];
+            if (!d) return '0 bps';
+            if (d < 1) return '0 bps';
+            var i = parseInt(Math.floor(Math.log(d) / Math.log(1024)));
+            return Math.round(d / Math.pow(1024, i), 2) + ' ' + sizes[i] + 'Bps';
+        });
+
+
+        var read = data['vbd_xvda_read'];
+        var write = data['vbd_xvda_write'];
+
+        var cdata = [
+            {
+                values: read,
+                key: 'Read'
+            },
+            {
+                values: write,
+                key: 'Write'
+            }
+        ];
+
+        d3.select('#disk svg').datum(cdata).transition().duration(500).call(chart);
+        nv.utils.windowResize(function() { d3.select('#disk svg').call(chart) });
+        return chart;
+      });
+
+
+      nv.addGraph(function() {
+        var chart;
+        chart = nv.models.lineChart().options(options);
+
+        chart.xAxis
+            .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)) });
+
+        chart.yAxis.axisLabel("").tickFormat(function(d) {
+            var sizes = ['', 'k', 'm', 'g'];
+            if (!d) return '0 bps';
+            d *= 8;
+            if (d < 1) return '0 bps';
+            var i = parseInt(Math.floor(Math.log(d) / Math.log(1000)));
+            return Math.round(d / Math.pow(1000, i), 2) + ' ' + sizes[i] + 'bps';
+        });
+
+
+        var rx = data['vif_0_rx'];
+        var tx = data['vif_0_tx'];
+
+        var cdata = [
+            {
+                values: rx,
+                key: 'Received'
+            },
+            {
+                values: tx,
+                key: 'Transmitted'
+            }
+        ];
+
+        d3.select('#network svg').datum(cdata).transition().duration(500).call(chart);
+        nv.utils.windowResize(function() { d3.select('#network svg').call(chart) });
+        return chart;
+      });
+
+      nv.addGraph(function() {
+        var chart;
+        chart = nv.models.lineChart().options(options);
+
+        chart.xAxis
             .tickFormat(function(d) { return d3.time.format('%H:%M:%S')(new Date(d)) });
 
         chart.yAxis.axisLabel("%").tickFormat(d3.format('.2f'));;

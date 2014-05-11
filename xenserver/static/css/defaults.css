@@ -228,6 +228,7 @@ ul.dropdown-menu a{
 
 .nvd3 .nv-axis line {
     stroke: #333;
+    shape-rendering: crispEdges;
 }
 
 .nvtooltip {
@@ -251,3 +252,6 @@ ul.dropdown-menu a{
     color: #64AEEC;
 }
 
+.nvd3 .nv-axis .nv-axisMaxMin text {
+    font-weight: normal;
+}
