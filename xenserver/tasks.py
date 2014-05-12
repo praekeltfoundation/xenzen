@@ -242,7 +242,7 @@ def updateServer(xenserver):
 
         for key, stat in stats.items():
             try:
-                metric = XenVM.objects.get(vm=vmobj, key=key)
+                metric = XenMetrics.objects.get(vm=vmobj, key=key)
                 metric.timeblob = json.dumps(ts)
                 metric.datablob = json.dumps(stat)
             except:
