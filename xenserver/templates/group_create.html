@@ -2,10 +2,11 @@
 {% load crispy_forms_tags %}
 
 {% block navbar %}
-{% include "fragments/navbar.html" with active="servers" %}
+{% include "fragments/navbar.html" with active="home" %}
 {% endblock %}
 
 {% block content %}
-    <h4 style="margin-bottom:10px">{% if server %}Edit Server{% else %}Create Server{% endif %}</h4>
+    <h4 style="margin-bottom:10px">{% if group %}Edit group{% else %}Create group{% endif %}</h4>
     {% crispy form %}
 {% endblock %}
+

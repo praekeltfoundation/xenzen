@@ -1,32 +1,34 @@
-{% include "fragments/head.html" with nav_active="templates" %}
+{% extends "fragments/default.html" %}
 
-    <div class="row-fluid">
-        <div class="span9">
-            <h4>Templates</h4>
-            <p>
-                {% if user.is_superuser %}
-                <a href="{% url 'template_create' %}" class="btn btn-success">Add template</a>
-                {% endif %}
-                <table class="table table-hover table-bordered table-condensed">
-                    <thead><tr><th>Template</th><th>ISO</th><th>Memory</th><th>Cores</th><th></th></tr></thead>
-                    <tbody>
-                        {% for template in templates %}
-                        <tr>
-                            <td>{{ template.name }}</td>
-                            <td>{{ template.iso }}</td>
-                            <td>{{ template.memory }}</td>
-                            <td>{{ template.cores }}</td>
-                            <td>
-                                <div class="btn-group">
-                                    <a class="btn" href="{% url 'template_edit' id=template.id %}" title="Edit settings"><i class="icon-edit"></i></a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </p>
-        </div>
-    </div>
+{% block navbar %}
+{% include "fragments/navbar.html" with active="templates" %}
+{% endblock %}
 
-{% include "fragments/foot.html" %}
+{% block content %}
+    <h4>Templates</h4>
+    {% if user.is_superuser %}
+    <a href="{% url 'template_create' %}" class="btn btn-info">Create template</a>
+    <br/>
+    <br/>
+    {% endif %}
+    <table class="table table-hover table-condensed table-bordered">
+        <thead><tr><th>Template</th><th>ISO</th><th>Memory</th><th>Cores</th><th></th></tr></thead>
+        <tbody>
+            {% for template in templates %}
+            <tr class='info'>
+                <td>{{ template.name }}</td>
+                <td>{{ template.iso }}</td>
+                <td>{{ template.memory }}</td>
+                <td>{{ template.cores }}</td>
+                <td width="1em">
+                    <div class="btn-group btn-group-sm">
+                        <a class="btn btn-default" href="{% url 'template_edit' id=template.id %}" title="Edit settings">
+                          <span class="glyphicon glyphicon-edit electric"></span>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

@@ -1,18 +1,20 @@
-from django.shortcuts import render, redirect
-from django.http import HttpResponse
-from django.contrib.auth.decorators import login_required
-from django.core.urlresolvers import reverse
-from django.forms import ValidationError
-
-from xenserver.models import XenServer, XenVM, Template, AuditLog, Zone
-from xenserver import forms, tasks, iputil
-
 import hashlib
 import uuid
 import time
 import random
 import urlparse
+import json
 from operator import itemgetter
+
+from django.shortcuts import render, redirect
+from django.http import HttpResponse, HttpResponseRedirect
+from django.contrib.auth.decorators import login_required
+from django.core.urlresolvers import reverse
+from django.forms import CheckboxSelectMultiple, ValidationError
+from django.db.models import Sum
+
+from xenserver.models import XenServer, XenVM, Template, AuditLog, Zone, Project, XenMetrics
+from xenserver import forms, tasks, iputil
 
 from celery.task.control import revoke
 
@@ -24,16 +26,38 @@ def log_action(user, severity, message):
 
 @login_required
 def index(request):
-    vms = XenVM.objects.all().order_by('name')
 
+    if not request.user.is_superuser:
+        projects = Project.objects.filter(administrators=request.user).order_by('name')
+        vms = None
+    else:
+        vms = XenVM.objects.filter(project=None).order_by('name')
+        projects = Project.objects.all().order_by('name')
 
+    error = request.GET.get('error')
     return render(request, "index.html", {
-        'vms': vms
+        'projects': projects,
+        'vms': vms,
+        'error': error
+    })
+
+@login_required
+def vm_view(request, id):
+
+    vm = XenVM.objects.get(id=id)
+
+    if not request.user.is_superuser:
+        if vm.project not in request.user.project_set.all():
+            return redirect('home')
+
+    return render(request, "vm/view.html", {
+        'vm': vm
     })
 
 @login_required
 def server_index(request):
-
+    if not request.user.is_superuser:
+        return redirect('home')
     servers = XenServer.objects.all().order_by('hostname')
     templates = Template.objects.all().order_by('-memory')
 
@@ -96,6 +120,65 @@ def server_index(request):
     })
 
 @login_required
+def group_create(request):
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    if request.method == "POST":
+        form = forms.GroupForm(request.POST)
+        if form.is_valid():
+            group = form.save(commit=False)
+            group.save()
+            log_action(request.user, 3, "Created project group %s" % group.name)
+            return redirect('home')
+
+    else:
+        form = forms.GroupForm()
+
+    form.fields['administrators'].widget = CheckboxSelectMultiple()
+
+    return render(request, 'group_create.html', {
+        'form': form
+    })
+
+@login_required
+def group_edit(request, id):
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    group = Project.objects.get(id=id)
+    if request.method == "POST":
+        form = forms.GroupForm(request.POST, instance=group)
+        if form.is_valid():
+            group = form.save(commit=False)
+            group.save()
+            form.save_m2m()
+            log_action(request.user, 3, "Edited project group %s" % group.name)
+            return redirect('home')
+    else:
+        form = forms.GroupForm(instance=group)
+
+    form.fields['administrators'].widget = CheckboxSelectMultiple()
+
+    return render(request, 'group_create.html', {
+        'group': group,
+        'form': form
+    })
+
+@login_required
+def group_move(request, vm, group):
+    vm_obj = XenVM.objects.get(id=vm)
+    if int(group) > 0:
+        group_obj = Project.objects.get(id=group)
+        vm_obj.project = group_obj
+    else:
+        vm_obj.project = None
+
+    vm_obj.save()
+
+    return redirect('home')
+
+@login_required
 def accounts_profile(request):
     if request.method == "POST":
         form = forms.UserForm(request.POST, instance=request.user)
@@ -114,6 +197,8 @@ def accounts_profile(request):
 
 @login_required
 def log_index(request):
+    if not request.user.is_superuser:
+        return redirect('home')
     logs = AuditLog.objects.all().order_by('-time')
 
     return render(request, "log_index.html", {
@@ -122,7 +207,8 @@ def log_index(request):
 
 @login_required
 def template_index(request):
-
+    if not request.user.is_superuser:
+        return redirect('home')
     templates = Template.objects.all().order_by('memory')
 
     return render(request, "templates/index.html", {
@@ -132,7 +218,7 @@ def template_index(request):
 @login_required
 def template_create(request):
     if not request.user.is_superuser:
-        return redirect('template_index')
+        return redirect('home')
 
     if request.method == "POST":
         form = forms.TemplateForm(request.POST)
@@ -177,6 +263,8 @@ def template_edit(request, id):
 
 @login_required
 def zone_index(request):
+    if not request.user.is_superuser:
+        return redirect('home')
     zones = Zone.objects.all().order_by('name')
 
     return render(request, "zones/index.html", {
@@ -230,6 +318,8 @@ def zone_create(request):
 
 @login_required
 def zone_view(request, id):
+    if not request.user.is_superuser:
+        return redirect('home')
     zone = Zone.objects.get(id=id)
     servers = XenServer.objects.filter(zone=zone).order_by('hostname')
 
@@ -241,6 +331,8 @@ def zone_view(request, id):
 
 @login_required
 def server_view(request, id):
+    if not request.user.is_superuser:
+        return redirect('home')
     server = XenServer.objects.get(id=id)
 
     vms = server.xenvm_set.all().order_by('name')
@@ -254,7 +346,7 @@ def server_view(request, id):
 @login_required
 def server_create(request):
     if not request.user.is_superuser:
-        return redirect('server_index')
+        return redirect('home')
 
     if request.method == "POST":
         form = forms.XenServerForm(request.POST)
@@ -299,10 +391,10 @@ def server_edit(request, id):
 
 @login_required
 def start_vm(request, id):
-    if not request.user.is_superuser:
-        return redirect('home')
-
     vm = XenVM.objects.get(id=id)
+    if not request.user.is_superuser:
+        if vm.project not in request.user.project_set.all():
+            return redirect('home')
 
     if vm.xsref:
         vm.status = 'Starting'
@@ -319,10 +411,11 @@ def start_vm(request, id):
 
 @login_required
 def stop_vm(request, id):
-    if not request.user.is_superuser:
-        return redirect('home')
-
     vm = XenVM.objects.get(id=id)
+
+    if not request.user.is_superuser:
+        if vm.project not in request.user.project_set.all():
+            return redirect('home')
 
     if vm.xsref:
         vm.status = 'Stopping'
@@ -339,10 +432,11 @@ def stop_vm(request, id):
 
 @login_required
 def reboot_vm(request, id):
-    if not request.user.is_superuser:
-        return redirect('home')
-
     vm = XenVM.objects.get(id=id)
+
+    if not request.user.is_superuser:
+        if vm.project not in request.user.project_set.all():
+            return redirect('home')
 
     if vm.xsref:
         vm.status = 'Rebooting'
@@ -359,10 +453,11 @@ def reboot_vm(request, id):
 
 @login_required
 def terminate_vm(request, id):
-    if not request.user.is_superuser:
-        return redirect('home')
-
     vm = XenVM.objects.get(id=id)
+
+    if not request.user.is_superuser:
+        if vm.project not in request.user.project_set.all():
+            return redirect('home')
 
     if vm.xsref:
         vm.status = 'Terminating'
@@ -387,6 +482,25 @@ def provision(request):
             template = provision['template']
             hostname = provision['hostname']
             host, domain = hostname.split('.', 1)
+
+            if provision['group']:
+                group = provision['group']
+                if not request.user.is_superuser:
+                    if group not in request.user.project_set.all():
+                        raise ValidationError("Invalid group")
+
+                    n_mem = template.memory + group.xenvm_set.all(
+                        ).aggregate(Sum('memory'))['memory__sum']
+                    n_cores = template.cores + group.xenvm_set.all(
+                        ).aggregate(Sum('sockets'))['sockets__sum']
+
+                    if (n_mem > group.max_memory) or (n_cores > group.max_cores):
+                        return HttpResponseRedirect('/?error=tmpl1')
+                        
+            else:
+                if not request.user.is_superuser:
+                    raise ValidationError("Invalid group")
+                group = None
 
             # Server autoselect
             if not server:
@@ -444,6 +558,7 @@ def provision(request):
                 sockets=template.cores,
                 memory=template.memory,
                 xenserver=server,
+                project=group,
                 ip=ip
             )
             vmobj.save()
@@ -460,6 +575,9 @@ def provision(request):
             return redirect('home')
     else:
         form = forms.ProvisionForm()
+        if not request.user.is_superuser:
+            form.fields['group'].queryset = Project.objects.filter(
+                administrators=request.user).order_by('name')
 
     return render(request, 'provision.html', {
         'form': form
@@ -469,3 +587,20 @@ def get_preseed(request, id):
     template = Template.objects.get(id=id)
 
     return HttpResponse(template.preseed, content_type="text/plain")
+
+
+@login_required
+def get_metrics(request, id):
+    vm = XenVM.objects.get(id=id)
+
+    metrics = XenMetrics.objects.filter(vm=vm)
+
+    d = {}
+
+    for m in metrics:
+        t = json.loads(m.timeblob)
+        md = json.loads(m.datablob)
+
+        d[m.key] = [[i*1000, j] for i,j in zip(t, md)]
+
+    return HttpResponse(json.dumps(d), content_type="application/json")

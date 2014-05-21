@@ -10,6 +10,11 @@ urlpatterns = patterns('',
     url(r'^$', 'xenserver.views.index', name='home'),
     url(r'^favicon\.ico$', RedirectView.as_view(url='/static/images/favicon.ico')),
 
+    # Groups
+    url(r'^group/create$', 'xenserver.views.group_create', name='group_create'),
+    url(r'^group/move/(?P<vm>[\w-]+)/(?P<group>[\w-]+)$', 'xenserver.views.group_move', name='group_move'),
+    url(r'^group/edit/(?P<id>[\w-]+)$', 'xenserver.views.group_edit', name='group_edit'),
+
     # Zones
     url(r'^zones/$', 'xenserver.views.zone_index', name='zone_index'),
     url(r'^zones/create$', 'xenserver.views.zone_create', name='zone_create'),
@@ -21,6 +26,9 @@ urlpatterns = patterns('',
     url(r'^servers/create$', 'xenserver.views.server_create', name='server_create'),
     url(r'^servers/edit/(?P<id>[\w-]+)$', 'xenserver.views.server_edit', name='server_edit'),
     url(r'^servers/view/(?P<id>[\w-]+)$', 'xenserver.views.server_view', name='server_view'),
+
+    # VMs
+    url(r'^vm/view/(?P<id>[\w-]+)$', 'xenserver.views.vm_view', name='vm_view'),
 
     # Templates
     url(r'^templates/$', 'xenserver.views.template_index', name='template_index'),
@@ -37,13 +45,15 @@ urlpatterns = patterns('',
     url(r'^terminate_vm/(?P<id>[\w-]+)$', 'xenserver.views.terminate_vm', name='terminate_vm'),
     url(r'^provision/$', 'xenserver.views.provision', name='provision'),
 
+    url(r'^metrics/(?P<id>[\w-]+)$', 'xenserver.views.get_metrics', name='get_metrics'),
+
     # Authentication
     url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}),
     url(r'^accounts/logout/$', 'django.contrib.auth.views.logout', {'next_page': '/'}, name='auth_logout'),
     url(r'^accounts/profile/$', 'xenserver.views.accounts_profile', name='accounts_profile'),
     url(r'^logs/$', 'xenserver.views.log_index', name='logs'),
 
-    #url(r'', include('social_auth.urls')),
+    url(r'', include('social_auth.urls')),
 
     # Uncomment the next line to enable the admin:
     url(r'^admin/', include(admin.site.urls)),

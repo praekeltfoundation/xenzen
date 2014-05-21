@@ -146,9 +146,9 @@ INSTALLED_APPS = (
     'raven.contrib.django.raven_compat',
     'djcelery',
     'djcelery_email',
-    #'social_auth',
+    'social_auth',
     'debug_toolbar',
-    'bootstrap',
+    'crispy_forms',
     'xenserver',
 )
 
@@ -222,8 +222,19 @@ SOUTH_TESTS_MIGRATE = False  # Do not run the migrations for our tests.
                              # for the tests and as such nothing needs to be
                              # migrated.
 
+AUTHENTICATION_BACKENDS = (
+    'social_auth.backends.google.GoogleOAuth2Backend',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+
 LOGIN_REDIRECT_URL = '/'
+
 SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/accounts/profile/'
+
+CRISPY_TEMPLATE_PACK = 'bootstrap3'
+
+SESSION_COOKIE_AGE = 1209600
 
 try:
     from local_settings import *

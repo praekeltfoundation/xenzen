@@ -1,28 +1,27 @@
-{% include "fragments/head.html" with nav_active="zones" %}
+{% extends "fragments/default.html" %}
 
-    <div class="row-fluid">
-        <div class="span12">
-            <h4>Servers in zone {{ zone.name }}</h4>
-            <p>
-                {% if user.is_superuser %}
-                <a href="{% url 'server_create' %}" class="btn btn-success">Add server</a>
-                {% endif %}
-                <table class="table table-hover table-bordered table-condensed">
-                    <tbody>
-                        {% for server in servers %}
-                        <tr>
-                            <td width="100%"><a href="{% url 'server_view' id=server.id %}">{{ server.hostname }}</a></td>
-                            <td>
-                                <div class="btn-group">
-                                    <a class="btn" href="{% url 'server_edit' id=server.id %}" title="Edit settings"><i class="icon-edit"></i></a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </p>
-        </div>
-    </div>
+{% block navbar %}
+{% include "fragments/navbar.html" with active="servers" %}
+{% endblock %}
 
-{% include "fragments/foot.html" %}
+{% block content %}
+    <h4>Servers in zone {{ zone.name }}</h4>
+    {% if user.is_superuser %}
+    <a href="{% url 'server_create' %}" class="btn btn-info">Add server</a>
+    <br/><br/>
+    {% endif %}
+    <table class="table table-hover table-bordered table-condensed">
+        <tbody>
+            {% for server in servers %}
+            <tr class="info">
+                <td width="100%"><a href="{% url 'server_view' id=server.id %}">{{ server.hostname }}</a></td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a class="btn btn-default" href="{% url 'server_edit' id=server.id %}" title="Edit settings"><span class="glyphicon glyphicon-edit electric"></a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

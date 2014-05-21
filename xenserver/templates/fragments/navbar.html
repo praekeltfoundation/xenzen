@@ -1,36 +1,21 @@
-      <div class="masthead">
-        <div class="row-fluid">
-            <div class="span10"><h3 class="muted"><img src="/static/images/xenzen32.png"/> XenZen</h3></div>
-            <div class="span2 usermast text-right">{% if user.is_authenticated %}
-                <div class="btn-group text-left">
-                    <button class="btn">{{user.username}}</button>
-                    <button class="btn dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
-                    <ul class="dropdown-menu">
-                          <li><a tabindex="-1" href="{% url 'accounts_profile' %}">Profile</a></li>
-                          <li><a tabindex="-1" href="{% url 'logs' %}">Logs</a></li>
-                          <li><a tabindex="-1" href="{% url 'auth_logout' %}">Logout</a></li>
-                    </ul>
-                </div>{% endif %}
-            </div>
-        </div>
-        {% if user.is_authenticated %}
-        <div class="navbar">
-          <div class="navbar-inner">
-            <div class="container">
-              <ul class="nav">
-                <li {% if nav_active == "home" %}class="active"{% endif %}>
-                    <a href="/">Home</a></li>
-                <li {% if nav_active == "zones" %}class="active"{% endif %}>
-                    <a href="/zones">Zones</a></li>
-                <li {% if nav_active == "servers" %}class="active"{% endif %}>
-                    <a href="/servers">Servers</a></li>
-                <li {% if nav_active == "templates" %}class="active"{% endif %}>
-                    <a href="/templates">Templates</a></li>
-                <li {% if nav_active == "provision" %}class="active"{% endif %}>
-                    <a href="/provision">Provision</a></li>
-              </ul>
-            </div>
-          </div>
-        </div><!-- /.navbar -->
-        {% endif %}
-      </div>
+<div class="col-sm-3 col-md-2 sidebar">
+ <ul class="nav nav-sidebar">
+    <li {% if active == "home" %}class="active"{% endif %}>
+      <a href="{% url 'home' %}">Overview</a>
+    </li>
+    <li {% if active == "provision" %}class="active"{% endif %}>
+      <a href="{% url 'provision' %}">Provision</a>
+    </li>
+    {% if user.is_superuser %}
+    <li {% if active == "servers" %}class="active"{% endif %}>
+      <a href="{% url 'server_index' %}">Servers</a>
+    </li>
+    <li {% if active == "zones" %}class="active"{% endif %}>
+      <a href="{% url 'zone_index' %}">Zones</a>
+    </li>
+    <li {% if active == "templates" %}class="active"{% endif %}>
+      <a href="{% url 'template_index' %}">Templates</a>
+    </li>
+    {% endif %}
+  </ul>
+</div>

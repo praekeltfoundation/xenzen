@@ -5,13 +5,14 @@ import xenapi
 import lxml
 import time
 import urllib2
+import json
 
 from lxml import etree
 from uuid import uuid4
 
 from celery import task
 
-from xenserver.models import XenServer, XenVM
+from xenserver.models import XenServer, XenVM, XenMetrics
 
 def getSession(hostname, username, password):
     url = 'https://%s:443/' % (hostname)
@@ -44,18 +45,36 @@ def getHostMetrics(session, hostname):
         keys.append(key)
 
     cpu_all=[]
+    dhash = {}
+    ts = []
 
     for r in rows:
-        values = r.xpath('v')
-        for i,v in enumerate(values):
-            k = keys[i]
-            cf, rt, oid, key = k.split(':')
-            if rt=='host' and key!='cpu_avg' and key.startswith('cpu'):
-                if v.text == 'NaN':
-                    continue
-                cpu_all.append(float(v.text))
+        t = r.xpath('t')[0].text
+        ts.append(int(t))
 
-    return int((sum(cpu_all)/len(cpu_all))*100)
+        values = r.xpath('v')
+        for k,v in zip(keys, values):
+            cf, rt, oid, key = k.split(':')
+            if cf =='AVERAGE':
+                if rt=='host' and key!='cpu_avg' and key.startswith('cpu'):
+                    if v.text == 'NaN':
+                        continue
+                    cpu_all.append(float(v.text))
+
+                if rt=='vm':
+                    if not oid in dhash:
+                        dhash[oid] = {}
+
+                    if not key in dhash[oid]:
+                        dhash[oid][key] = []
+
+                    if v.text == 'NaN':
+                        dhash[oid][key].append(None)
+                    else:
+                        dhash[oid][key].append(float(v.text))
+
+    cpu_host = int((sum(cpu_all)/len(cpu_all))*100)
+    return cpu_host, ts, dhash
 
 @task()
 def shutdown_vm(vm):
@@ -143,6 +162,7 @@ def updateVm(xenserver, vmref, vmobj):
             vm.status = vmobj['power_state']
             vm.sockets = int(vmobj['VCPUs_max'])
             vm.memory = int(vmobj['memory_static_max']) / 1048576
+            vm.uuid = vmobj['uuid']
             vm.xenserver = xenserver
             vm.xsref = vmref
 
@@ -152,6 +172,7 @@ def updateVm(xenserver, vmref, vmobj):
         except XenVM.DoesNotExist:
             vm = XenVM.objects.create(
                 xsref=vmref,
+                uuid=vmobj['uuid'],
                 name=name,
                 status=vmobj['power_state'],
                 sockets=int(vmobj['VCPUs_max']),
@@ -184,9 +205,12 @@ def updateServer(xenserver):
     xenserver.mem_free = int(mem_free) / 1048576
 
     try:
-        xenserver.cpu_util = getHostMetrics(session, xenserver.hostname)
+        xenserver.cpu_util, ts, vmstats = getHostMetrics(
+            session, xenserver.hostname)
     except:
         xenserver.cpu_util = 0
+        vmstats = {}
+        ts = []
 
     xenserver.save()
 
@@ -207,6 +231,28 @@ def updateServer(xenserver):
 
     # Purge lost VM's 
     lost = XenVM.objects.filter(xenserver=xenserver).exclude(xsref__in=vmrefs).delete()
+
+    # Update vm metrics
+    for vm, stats in vmstats.items():
+        # Get VM
+        try:
+            vmobj = XenVM.objects.get(uuid=vm)
+        except:
+            continue
+
+        for key, stat in stats.items():
+            try:
+                metric = XenMetrics.objects.get(vm=vmobj, key=key)
+                metric.timeblob = json.dumps(ts)
+                metric.datablob = json.dumps(stat)
+            except:
+                metric = XenMetrics.objects.create(
+                    vm=vmobj,
+                    key=key,
+                    timeblob=json.dumps(ts),
+                    datablob=json.dumps(stat)
+                )
+            metric.save()
 
 @task()
 def updateVms():

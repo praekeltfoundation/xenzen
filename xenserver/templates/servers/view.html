@@ -1,35 +1,31 @@
-{% include "fragments/head.html" with nav_active="servers" %}
-    <div class="row-fluid">
-        <div class="span9">
-            <h4>Server details</h4>
-            <p>
-                <strong>Hostname:</strong> {{server.hostname}}
-                <br/>
-                <strong>IP Range:</strong> {{server.subnet}}
-                <br/>
-            </p>
-        </div>
-    </div>
+{% extends "fragments/default.html" %}
 
-    <div class="row-fluid">
-        <div class="span9">
-            <h4>Virtual machines</h4>
-            <p>
-                <table class="table table-hover table-bordered table-condensed">
-                    <thead><tr><th>VM</th><th>IP</th><th>Memory</th><th>Status</th><th></th></tr></thead>
-                    <tbody>
-                        {% for vm in vms %}
-                        <tr  {% if vm.status == 'Running' %}class="success"{%else%}class="error"{%endif%}>
-                            <td>{{ vm.name }}</td>
-                            <td>{{ vm.ip }}</td>
-                            <td>{{ vm.memory }} MB</td>
-                            <td>{{ vm.status }}</td>
-                            <td></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </p>
-        </div>
-    </div>
-{% include "fragments/foot.html" %}
+{% block navbar %}
+{% include "fragments/navbar.html" with active="servers" %}
+{% endblock %}
+
+
+{% block content %}
+
+    <h4>Server details</h4>
+    <dl class="dl-horizontal">
+        <dt>Hostname:</dt><dd>{{server.hostname}}</dd>
+        <dt>IP Range:</dt><dd>{{server.subnet}}</dd>
+    </dl>
+
+    <h4>Virtual machines</h4>
+    <table class="table table-hover table-bordered table-condensed">
+        <thead><tr><th>VM</th><th>IP</th><th>Memory</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+            {% for vm in vms %}
+            <tr  {% if vm.status == 'Running' %}class="info"{%else%}class="error"{%endif%}>
+                <td>{{ vm.name }}</td>
+                <td>{{ vm.ip }}</td>
+                <td>{{ vm.memory }} MB</td>
+                <td>{{ vm.status }}</td>
+                <td></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

@@ -31,11 +31,25 @@ class XenServer(models.Model):
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
 
+class Project(models.Model):
+    name = models.CharField(max_length=255)
+
+    max_cores = models.IntegerField(default=8)
+    max_memory = models.IntegerField(default=16384)
+
+    administrators = models.ManyToManyField(User, blank=True)
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.__unicode__().encode('utf-8', 'replace')
 
 class XenVM(models.Model):
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=128)
     xsref = models.CharField(max_length=255, unique=True)
+    uuid = models.CharField(max_length=255)
 
     sockets = models.IntegerField()
     memory = models.IntegerField()
@@ -44,12 +58,19 @@ class XenVM(models.Model):
 
     xenserver = models.ForeignKey(XenServer, null=True)
 
+    project = models.ForeignKey(Project, null=True)
+
     def __unicode__(self):
         return self.name
 
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
 
+class XenMetrics(models.Model):
+    vm = models.ForeignKey(XenVM)
+    key = models.CharField(max_length=128)
+    timeblob = models.TextField()
+    datablob = models.TextField()
     
 class Template(models.Model):
     name = models.CharField(max_length=255)
