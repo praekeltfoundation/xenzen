@@ -24,7 +24,7 @@ class XenServerForm(BaseModelForm):
     class Meta:
         model = models.XenServer
         exclude = (
-            'cores', 'memory'
+            'cores', 'memory', 'mem_free', 'cpu_util'
         )
 
 class UserForm(BaseModelForm):
@@ -43,6 +43,12 @@ class ZoneForm(BaseModelForm):
 class GroupForm(BaseModelForm):
     class Meta:
         model = models.Project
+
+class PoolForm(BaseModelForm):
+   
+    class Meta:
+        model = models.AddressPool
+        exclude = ('zone', )
 
 class ProvisionForm(BaseForm):
     hostname = forms.CharField()

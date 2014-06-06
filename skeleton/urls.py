@@ -21,6 +21,10 @@ urlpatterns = patterns('',
     url(r'^zones/edit/(?P<id>[\w-]+)$', 'xenserver.views.zone_edit', name='zone_edit'),
     url(r'^zones/view/(?P<id>[\w-]+)$', 'xenserver.views.zone_view', name='zone_view'),
 
+    url(r'^zones/create_pool/(?P<zone>[\w-]+)$', 'xenserver.views.pool_create', name='pool_create'),
+    url(r'^zones/edit_pool/(?P<id>[\w-]+)$', 'xenserver.views.pool_edit', name='pool_edit'),
+    url(r'^zones/delete_pool/(?P<id>[\w-]+)$', 'xenserver.views.pool_delete', name='pool_delete'),
+
     # Servers
     url(r'^servers/$', 'xenserver.views.server_index', name='server_index'),
     url(r'^servers/create$', 'xenserver.views.server_create', name='server_create'),

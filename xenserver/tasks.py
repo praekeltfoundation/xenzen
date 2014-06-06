@@ -12,7 +12,8 @@ from uuid import uuid4
 
 from celery import task
 
-from xenserver.models import XenServer, XenVM, XenMetrics
+from xenserver.models import XenServer, XenVM, XenMetrics, AddressPool, Addresses
+from xenserver import iputil
 
 def getSession(hostname, username, password):
     url = 'https://%s:443/' % (hostname)
@@ -141,6 +142,32 @@ def destroy_vm(vm):
 
     vm.delete()
 
+def updateAddress(server, vm, ip, pool=None):
+    ip_int = iputil.stoip(ip)
+
+    if not pool:
+        for p in AddressPool.objects.filter(zone=server.zone):
+            ipnl, first, last, cidr = iputil.ipcalc(p.subnet)
+            if (ip_int>=first) and (ip_int<=last):
+                pool = p
+
+        if not pool:
+            return
+
+    try:
+        addr = Addresses.objects.get(ip_int=ip_int)
+        addr.vm = vm
+    except:
+        addr = Addresses.objects.create(
+            ip=ip,
+            ip_int=ip_int,
+            version=':' in ip and 6 or 4,
+            vm=vm,
+            pool=pool
+        )
+
+    addr.save()
+
 @task
 def updateVm(xenserver, vmref, vmobj):
     if (not vmobj['is_a_template']) and (not vmobj['is_control_domain']):
@@ -182,6 +209,11 @@ def updateVm(xenserver, vmref, vmobj):
             )
 
         vm.save()
+
+        # Update the address table
+        if netip:
+            updateAddress(xenserver, vm, netip)
+
 
 @task
 def updateServer(xenserver):

@@ -24,4 +24,33 @@
             {% endfor %}
         </tbody>
     </table>
+
+    <h4>IP pools</h4>
+    {% if user.is_superuser %}
+    <a href="{% url 'pool_create' zone=zone.id %}" class="btn btn-info">Create pool</a>
+    <br/><br/>
+    {% endif %}
+    <table class="table table-hover table-bordered table-condensed">
+        <thead><tr><th>Subnet</th><th>Gateway</th><th>Server</th><th></th></tr></thead>
+        <tbody>
+            {% for pool in pools %}
+            <tr class="info">
+                <td>{{ pool.subnet }}</a></td>
+                <td>{{ pool.gateway }}</a></td>
+                <td>{{ pool.server }}</a></td>
+                <td width="80em">
+                    <div class="btn-group btn-group-sm">
+                        <a class="btn btn-default" href="{% url 'pool_edit' id=pool.id %}" title="Edit settings">
+                          <span class="glyphicon electric glyphicon-edit"></span>
+                        </a>
+                        <a class="btn btn-default" href="{% url 'pool_delete' id=pool.id %}" title="Delete">
+                          <span class="glyphicon electric glyphicon-trash"></span>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
 {% endblock %}
