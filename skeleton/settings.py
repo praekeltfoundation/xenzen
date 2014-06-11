@@ -229,6 +229,8 @@ CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
 SESSION_COOKIE_AGE = 1209600
 
+SESSION_SERIALIZER='django.contrib.sessions.serializers.PickleSerializer'
+
 # If set to True, no task actions are completed
 PRETEND_MODE = False
 
