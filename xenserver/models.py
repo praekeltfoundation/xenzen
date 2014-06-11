@@ -11,7 +11,6 @@ class Zone(models.Model):
     def __str__(self):
         return self.__unicode().encode('utf-8', 'replace')
 
-
 class XenServer(models.Model):
     hostname = models.CharField(max_length=255, unique=True)
     username = models.CharField(max_length=255)
@@ -21,7 +20,6 @@ class XenServer(models.Model):
     mem_free = models.IntegerField(default=1)
     cpu_util = models.IntegerField(default=1)
     cores = models.IntegerField(default=1)
-    subnet = models.CharField(max_length=255, blank=True)
 
     zone = models.ForeignKey(Zone)
 
@@ -45,6 +43,13 @@ class Project(models.Model):
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
 
+class AddressPool(models.Model):
+    subnet = models.CharField(max_length=128, unique=True)
+    gateway = models.CharField(max_length=128)
+    zone = models.ForeignKey(Zone)
+    server = models.ForeignKey(XenServer, null=True, blank=True)
+    version = models.IntegerField()
+
 class XenVM(models.Model):
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=128)
@@ -63,6 +68,18 @@ class XenVM(models.Model):
     def __unicode__(self):
         return self.name
 
+    def __str__(self):
+        return self.__unicode__().encode('utf-8', 'replace')
+
+class Addresses(models.Model):
+    ip = models.CharField(max_length=128)
+    ip_int = models.IntegerField(db_index=True)
+    version = models.IntegerField()
+    vm = models.ForeignKey(XenVM, null=True, blank=True)
+    pool = models.ForeignKey(AddressPool)
+
+    def __unicode__(self):
+        return self.ip
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
 

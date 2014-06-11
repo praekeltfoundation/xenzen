@@ -11,13 +11,48 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.forms import CheckboxSelectMultiple, ValidationError
-from django.db.models import Sum
+from django.conf import settings
+from django.db.models import Sum, Max, Min
+from django.db import transaction
 
-from xenserver.models import XenServer, XenVM, Template, AuditLog, Zone, Project, XenMetrics
+from xenserver.models import *
 from xenserver import forms, tasks, iputil
 
 from celery.task.control import revoke
 
+
+def getIp(pool):
+    gateway = iputil.stoip(pool.gateway)
+    last_ip = pool.addresses_set.all().aggregate(Max('ip_int'))['ip_int__max']
+    
+    ipnl, first, last, cidr = iputil.ipcalc(pool.subnet)
+
+    if not last_ip:
+        next_ip = first
+
+    else:
+        next_ip = last_ip + 1
+
+    if next_ip == gateway:
+        next_ip += 1
+
+    if (next_ip > last):
+        try:
+            empty = Addresses.objects.filter(
+                vm=None, pool=pool).order_by('ip_int')[0]
+            next_ip = empty.ip_int
+
+        except:
+            # Slowest last resort
+            addresses = [i.ip_int for i in pool.addresses_set.all()]
+            for ip in range(first, last):
+                if (ip != gateway) and (ip not in addresses):
+                    next_ip = ip
+                    break
+
+            return None
+
+    return iputil.iptos(next_ip)
 
 def log_action(user, severity, message):
     log = AuditLog.objects.create(username=user, severity=severity, 
@@ -262,6 +297,65 @@ def template_edit(request, id):
     return render(request, 'templates/create_edit.html', d)
 
 @login_required
+def pool_create(request, zone):
+    if not request.user.is_superuser:
+        return redirect('index')
+
+    zoneobj = Zone.objects.get(id=zone)
+
+    if request.method == "POST":
+        form = forms.PoolForm(request.POST)
+        if form.is_valid():
+            pool = form.save(commit=False)
+            pool.zone = zoneobj
+            pool.save()
+            
+            log_action(request.user, 2, "Created pool %s" % pool.subnet)
+            return redirect('zone_view', id=zone)
+    else:
+        form = forms.PoolForm()
+        form.fields['server'].queryset = XenServer.objects.filter(zone=zoneobj)
+
+    return render(request, 'zones/pool_edit.html', {
+        'form': form
+    })
+
+@login_required
+def pool_edit(request, id):
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    pool = AddressPool.objects.get(id=id)
+
+    if request.method == "POST":
+        form = forms.PoolForm(request.POST, instance=pool)
+
+        if form.is_valid():
+            pool = form.save(commit=False)
+            pool.save()
+
+            log_action(request.user, 3, "Edited pool %s" % pool.subnet)
+            return redirect('zone_view', id=pool.zone.id)
+
+    else:
+        form = forms.PoolForm(instance=pool)
+        form.fields['server'].queryset = XenServer.objects.filter(zone=pool.zone)
+
+    return render(request, 'zones/pool_edit.html', {
+        'form': form, 
+        'pool': pool
+    })
+
+@login_required
+def pool_delete(request, id):
+    pool = AddressPool.objects.get(id=id)
+    zoneid =  pool.zone.id
+
+    pool.delete()
+
+    return redirect('zone_view', id=zoneid)
+
+@login_required
 def zone_index(request):
     if not request.user.is_superuser:
         return redirect('home')
@@ -316,16 +410,19 @@ def zone_create(request):
         'form': form
     })
 
+
 @login_required
 def zone_view(request, id):
     if not request.user.is_superuser:
         return redirect('home')
     zone = Zone.objects.get(id=id)
     servers = XenServer.objects.filter(zone=zone).order_by('hostname')
+    pools = AddressPool.objects.filter(zone=zone).order_by('subnet')
 
     return render(request, "zones/view.html", {
         'servers': servers,
-        'zone': zone
+        'zone': zone,
+        'pools': pools
     })
 
 
@@ -400,7 +497,8 @@ def start_vm(request, id):
         vm.status = 'Starting'
         vm.save()
 
-        tasks.start_vm.delay(vm)
+        if not settings.PRETEND_MODE:
+            tasks.start_vm.delay(vm)
 
         log_action(request.user, 3, "Started VM %s on %s" % (
             vm.name,
@@ -421,7 +519,8 @@ def stop_vm(request, id):
         vm.status = 'Stopping'
         vm.save()
 
-        tasks.shutdown_vm.delay(vm)
+        if not settings.PRETEND_MODE:
+            tasks.shutdown_vm.delay(vm)
 
         log_action(request.user, 3, "Shutdown VM %s on %s" % (
             vm.name,
@@ -442,7 +541,8 @@ def reboot_vm(request, id):
         vm.status = 'Rebooting'
         vm.save()
 
-        tasks.reboot_vm.delay(vm)
+        if not settings.PRETEND_MODE:
+            tasks.reboot_vm.delay(vm)
 
         log_action(request.user, 3, "Rebooted VM %s on %s" % (
             vm.name,
@@ -463,7 +563,9 @@ def terminate_vm(request, id):
         vm.status = 'Terminating'
         vm.save()
 
-        tasks.destroy_vm.delay(vm)
+        if not settings.PRETEND_MODE:
+            tasks.destroy_vm.delay(vm)
+
         log_action(request.user, 3, "Terminated VM %s on %s" % (
             vm.name,
             vm.xenserver.hostname
@@ -536,16 +638,33 @@ def provision(request):
                 cidr = provision['ipaddress']
                 subnet = iputil.getSubnet(cidr)
 
+                pool = AddressPool.objects.get(subnet=subnet)
+
                 ip = cidr.split('/')[0]
-                gateway = iputil.getGateway(subnet)
+                gateway = pool.gateway
                 netmask = iputil.getNetmask(subnet)
             else:
                 # Find the first free IP address
-                vms = server.xenvm_set.all()
-                used_addresses = [vm.ip for vm in vms if vm.ip]
-                ip = iputil.firstRemaining(server.subnet, used_addresses)
-                gateway = iputil.getGateway(server.subnet)
-                netmask = iputil.getNetmask(server.subnet)
+                pools = []
+                server_pools = server.addresspool_set.all()
+                for p in server_pools:
+                    pools.append(p)
+                
+                zone_pools = server.zone.addresspool_set.all()
+                for p in zone_pools:
+                    if p not in pools:
+                        pools.append(p)
+
+                ip = None
+                for pool in pools:
+                    ip = getIp(pool)
+                    if ip:
+                        gateway = pool.gateway
+                        netmask = iputil.getNetmask(pool.subnet)
+                        break
+
+                if not ip:
+                    raise Exception('Oh dear, no more IP addresses')
 
             # Get a preseed URL
             url = urlparse.urljoin(request.build_absolute_uri(),
@@ -563,9 +682,12 @@ def provision(request):
             )
             vmobj.save()
 
+            addr = tasks.updateAddress(server, vmobj, ip, pool=pool)
+
             # Send provisioning to celery
-            task = tasks.create_vm.delay(
-                server, template, host, domain, ip, netmask, gateway, url)
+            if not settings.PRETEND_MODE:
+                task = tasks.create_vm.delay(
+                    server, template, host, domain, ip, netmask, gateway, url)
 
             log_action(request.user, 3, "Provisioned VM %s on %s" % (
                 hostname,

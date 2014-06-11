@@ -229,6 +229,9 @@ CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
 SESSION_COOKIE_AGE = 1209600
 
+# If set to True, no task actions are completed
+PRETEND_MODE = False
+
 try:
     from local_settings import *
 except ImportError:

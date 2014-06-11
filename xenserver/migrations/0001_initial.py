@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import datetime
+from south.utils import datetime_utils as datetime
 from south.db import db
 from south.v2 import SchemaMigration
 from django.db import models
@@ -25,7 +25,6 @@ class Migration(SchemaMigration):
             ('mem_free', self.gf('django.db.models.fields.IntegerField')(default=1)),
             ('cpu_util', self.gf('django.db.models.fields.IntegerField')(default=1)),
             ('cores', self.gf('django.db.models.fields.IntegerField')(default=1)),
-            ('subnet', self.gf('django.db.models.fields.CharField')(max_length=255, blank=True)),
             ('zone', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['xenserver.Zone'])),
         ))
         db.send_create_signal(u'xenserver', ['XenServer'])
@@ -48,6 +47,17 @@ class Migration(SchemaMigration):
         ))
         db.create_unique(m2m_table_name, ['project_id', 'user_id'])
 
+        # Adding model 'AddressPool'
+        db.create_table(u'xenserver_addresspool', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('subnet', self.gf('django.db.models.fields.CharField')(unique=True, max_length=128)),
+            ('gateway', self.gf('django.db.models.fields.CharField')(max_length=128)),
+            ('zone', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['xenserver.Zone'])),
+            ('server', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['xenserver.XenServer'], null=True, blank=True)),
+            ('version', self.gf('django.db.models.fields.IntegerField')()),
+        ))
+        db.send_create_signal(u'xenserver', ['AddressPool'])
+
         # Adding model 'XenVM'
         db.create_table(u'xenserver_xenvm', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
@@ -62,6 +72,17 @@ class Migration(SchemaMigration):
             ('project', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['xenserver.Project'], null=True)),
         ))
         db.send_create_signal(u'xenserver', ['XenVM'])
+
+        # Adding model 'Addresses'
+        db.create_table(u'xenserver_addresses', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('ip', self.gf('django.db.models.fields.CharField')(max_length=128)),
+            ('ip_int', self.gf('django.db.models.fields.IntegerField')(db_index=True)),
+            ('version', self.gf('django.db.models.fields.IntegerField')()),
+            ('vm', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['xenserver.XenVM'], null=True, blank=True)),
+            ('pool', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['xenserver.AddressPool'])),
+        ))
+        db.send_create_signal(u'xenserver', ['Addresses'])
 
         # Adding model 'XenMetrics'
         db.create_table(u'xenserver_xenmetrics', (
@@ -109,8 +130,14 @@ class Migration(SchemaMigration):
         # Removing M2M table for field administrators on 'Project'
         db.delete_table(db.shorten_name(u'xenserver_project_administrators'))
 
+        # Deleting model 'AddressPool'
+        db.delete_table(u'xenserver_addresspool')
+
         # Deleting model 'XenVM'
         db.delete_table(u'xenserver_xenvm')
+
+        # Deleting model 'Addresses'
+        db.delete_table(u'xenserver_addresses')
 
         # Deleting model 'XenMetrics'
         db.delete_table(u'xenserver_xenmetrics')
@@ -141,7 +168,7 @@ class Migration(SchemaMigration):
             'date_joined': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
             'email': ('django.db.models.fields.EmailField', [], {'max_length': '75', 'blank': 'True'}),
             'first_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
-            'groups': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['auth.Group']", 'symmetrical': 'False', 'blank': 'True'}),
+            'groups': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "u'user_set'", 'blank': 'True', 'to': u"orm['auth.Group']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'is_active': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
             'is_staff': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
@@ -149,7 +176,7 @@ class Migration(SchemaMigration):
             'last_login': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
             'last_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
             'password': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
-            'user_permissions': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['auth.Permission']", 'symmetrical': 'False', 'blank': 'True'}),
+            'user_permissions': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "u'user_set'", 'blank': 'True', 'to': u"orm['auth.Permission']"}),
             'username': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '30'})
         },
         u'contenttypes.contenttype': {
@@ -158,6 +185,24 @@ class Migration(SchemaMigration):
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'model': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
+        },
+        u'xenserver.addresses': {
+            'Meta': {'object_name': 'Addresses'},
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'ip': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            'ip_int': ('django.db.models.fields.IntegerField', [], {'db_index': 'True'}),
+            'pool': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['xenserver.AddressPool']"}),
+            'version': ('django.db.models.fields.IntegerField', [], {}),
+            'vm': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['xenserver.XenVM']", 'null': 'True', 'blank': 'True'})
+        },
+        u'xenserver.addresspool': {
+            'Meta': {'object_name': 'AddressPool'},
+            'gateway': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'server': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['xenserver.XenServer']", 'null': 'True', 'blank': 'True'}),
+            'subnet': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '128'}),
+            'version': ('django.db.models.fields.IntegerField', [], {}),
+            'zone': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['xenserver.Zone']"})
         },
         u'xenserver.auditlog': {
             'Meta': {'object_name': 'AuditLog'},
@@ -202,7 +247,6 @@ class Migration(SchemaMigration):
             'mem_free': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
             'memory': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
             'password': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
-            'subnet': ('django.db.models.fields.CharField', [], {'max_length': '255', 'blank': 'True'}),
             'username': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'zone': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['xenserver.Zone']"})
         },
