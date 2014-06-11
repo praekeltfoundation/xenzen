@@ -147,7 +147,6 @@ INSTALLED_APPS = (
     'djcelery',
     'djcelery_email',
     'social_auth',
-    'debug_toolbar',
     'crispy_forms',
     'xenserver',
 )
@@ -206,12 +205,6 @@ CELERYBEAT_SCHEDULE = {
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# Django debug toolbar
-DEBUG_TOOLBAR_CONFIG = {
-    'INTERCEPT_REDIRECTS': False,
-    'ENABLE_STACKTRACES': True,
-}
 
 # South configuration variables
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
