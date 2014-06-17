@@ -73,7 +73,7 @@ class XenVM(models.Model):
 
 class Addresses(models.Model):
     ip = models.CharField(max_length=128)
-    ip_int = models.IntegerField(db_index=True)
+    ip_int = models.BigIntegerField(db_index=True)
     version = models.IntegerField()
     vm = models.ForeignKey(XenVM, null=True, blank=True)
     pool = models.ForeignKey(AddressPool)
