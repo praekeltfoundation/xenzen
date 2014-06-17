@@ -151,22 +151,20 @@ def updateAddress(server, vm, ip, pool=None):
             if (ip_int>=first) and (ip_int<=last):
                 pool = p
 
-        if not pool:
-            return
+    if pool:
+        try:
+            addr = Addresses.objects.get(ip_int=ip_int)
+            addr.vm = vm
+        except:
+            addr = Addresses.objects.create(
+                ip=ip,
+                ip_int=ip_int,
+                version=':' in ip and 6 or 4,
+                vm=vm,
+                pool=pool
+            )
 
-    try:
-        addr = Addresses.objects.get(ip_int=ip_int)
-        addr.vm = vm
-    except:
-        addr = Addresses.objects.create(
-            ip=ip,
-            ip_int=ip_int,
-            version=':' in ip and 6 or 4,
-            vm=vm,
-            pool=pool
-        )
-
-    addr.save()
+        addr.save()
 
 @task
 def updateVm(xenserver, vmref, vmobj):
@@ -212,7 +210,10 @@ def updateVm(xenserver, vmref, vmobj):
 
         # Update the address table
         if netip:
-            updateAddress(xenserver, vm, netip)
+            try:
+                updateAddress(xenserver, vm, netip)
+            except:
+                pass
 
 
 @task
