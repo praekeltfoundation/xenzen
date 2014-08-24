@@ -1,8 +1,4 @@
-import os
-import sys
-import subprocess
 import xenapi
-import lxml
 import time
 import urllib2
 import json
@@ -77,7 +73,7 @@ def getHostMetrics(session, hostname):
     cpu_host = int((sum(cpu_all)/len(cpu_all))*100)
     return cpu_host, ts, dhash
 
-@task()
+@task(time_limit=60)
 def shutdown_vm(vm):
     xenserver = vm.xenserver
     session = getSession(xenserver.hostname,
@@ -89,7 +85,7 @@ def shutdown_vm(vm):
     session.xenapi.VM.shutdown(vm.xsref)
     session.xenapi.session.logout()
 
-@task()
+@task(time_limit=60)
 def reboot_vm(vm):
     xenserver = vm.xenserver
     session = getSession(xenserver.hostname,
@@ -101,7 +97,7 @@ def reboot_vm(vm):
     session.xenapi.VM.hard_reboot(vm.xsref)
     session.xenapi.session.logout()
 
-@task()
+@task(time_limit=60)
 def start_vm(vm):
     xenserver = vm.xenserver
     session = getSession(xenserver.hostname,
@@ -113,7 +109,7 @@ def start_vm(vm):
     session.xenapi.VM.start(vm.xsref, False, True)
     session.xenapi.session.logout()
 
-@task()
+@task(time_limit=120)
 def destroy_vm(vm):
     xenserver = vm.xenserver
     session = getSession(xenserver.hostname,
@@ -166,7 +162,7 @@ def updateAddress(server, vm, ip, pool=None):
 
         addr.save()
 
-@task
+@task(time_limit=60)
 def updateVm(xenserver, vmref, vmobj):
     if (not vmobj['is_a_template']) and (not vmobj['is_control_domain']):
         try:
@@ -216,7 +212,7 @@ def updateVm(xenserver, vmref, vmobj):
                 pass
 
 
-@task
+@task(time_limit=60)
 def updateServer(xenserver):
     session = getSession(xenserver.hostname,
         xenserver.username, xenserver.password)
@@ -287,13 +283,13 @@ def updateServer(xenserver):
                 )
             metric.save()
 
-@task()
+@task(time_limit=60)
 def updateVms():
     servers = XenServer.objects.all()
     for xenserver in servers:
         updateServer.delay(xenserver)
 
-@task()
+@task(time_limit=120)
 def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_url):
     session = getSession(xenserver.hostname,
             xenserver.username, xenserver.password)
