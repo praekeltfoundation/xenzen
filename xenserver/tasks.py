@@ -294,8 +294,8 @@ def complete_vm(vm):
     # Hook task for post provisioning cleanup
     xenserver = vm.xenserver
 
-    session = getSession(xenserver.hostname,
-            xenserver.username, xenserver.password)
+    session = getSession(xenserver.hostname, xenserver.username,
+        xenserver.password)
 
     # XXX If the server somehow provisions before we get an updated OpaqueRef
     # from XenServer, then this ends in tears, but I'm too lazy to fix that
@@ -308,12 +308,11 @@ def complete_vm(vm):
         vbrec = session.xenapi.VBD.get_record(vbd)
         if vbrec['type'] == 'CD' and not vbrec['empty']:
             session.xenapi.VBD.eject(vbd)
-            print vbd    
 
 @task(time_limit=120)
 def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_url):
-    session = getSession(xenserver.hostname,
-            xenserver.username, xenserver.password)
+    session = getSession(xenserver.hostname, xenserver.username,
+        xenserver.password)
 
     mem_bytes = str(template.memory * (1024*1024))
     cores = str(template.cores)

@@ -686,7 +686,7 @@ def provision(request):
 
             # Send provisioning to celery
             if not settings.PRETEND_MODE:
-                task = tasks.create_vm.delay(
+                tasks.create_vm.delay(
                     server, template, host, domain, ip, netmask, gateway, url)
 
             log_action(request.user, 3, "Provisioned VM %s on %s" % (
