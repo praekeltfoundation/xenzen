@@ -705,11 +705,18 @@ def provision(request):
         'form': form
     })
 
+def complete_provision(request, hostname):
+    vm = XenVM.objects.get(name=hostname)
+
+    # Send our completion task to Celery
+    tasks.complete_vm.delay(vm)
+
+    return HttpResponse(json.dumps('{}'), content_type="application/json")
+
 def get_preseed(request, id):
     template = Template.objects.get(id=id)
 
     return HttpResponse(template.preseed, content_type="text/plain")
-
 
 @login_required
 def get_metrics(request, id):

@@ -290,6 +290,27 @@ def updateVms():
         updateServer.delay(xenserver)
 
 @task(time_limit=120)
+def complete_vm(vm):
+    # Hook task for post provisioning cleanup
+    xenserver = vm.xenserver
+
+    session = getSession(xenserver.hostname,
+            xenserver.username, xenserver.password)
+
+    # XXX If the server somehow provisions before we get an updated OpaqueRef
+    # from XenServer, then this ends in tears, but I'm too lazy to fix that
+    # right now XXX
+    rec = session.xenapi.VM.get_record(vm.xsref)
+
+    vbds = rec['VBDs']
+
+    for vbd in vbds:
+        vbrec = session.xenapi.VBD.get_record(vbd)
+        if vbrec['type'] == 'CD' and not vbrec['empty']:
+            session.xenapi.VBD.eject(vbd)
+            print vbd    
+
+@task(time_limit=120)
 def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_url):
     session = getSession(xenserver.hostname,
             xenserver.username, xenserver.password)
