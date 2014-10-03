@@ -297,9 +297,6 @@ def complete_vm(vm):
     session = getSession(xenserver.hostname, xenserver.username,
         xenserver.password)
 
-    # XXX If the server somehow provisions before we get an updated OpaqueRef
-    # from XenServer, then this ends in tears, but I'm too lazy to fix that
-    # right now XXX
     rec = session.xenapi.VM.get_record(vm.xsref)
 
     vbds = rec['VBDs']
@@ -310,7 +307,7 @@ def complete_vm(vm):
             session.xenapi.VBD.eject(vbd)
 
 @task(time_limit=120)
-def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_url):
+def create_vm(vm, xenserver, template, name, domain, ip, subnet, gateway, preseed_url):
     session = getSession(xenserver.hostname, xenserver.username,
         xenserver.password)
 
@@ -417,6 +414,10 @@ def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_ur
 
     # Create virtual machine
     VM_ref=session.xenapi.VM.create(vmprop)
+
+    # Update our OpaqueRef
+    vm.xsref = VM_ref
+    vm.save()
 
     vif = { 'device': '0',
             'network': network,
