@@ -51,6 +51,8 @@ urlpatterns = patterns('',
 
     url(r'^metrics/(?P<id>[\w-]+)$', 'xenserver.views.get_metrics', name='get_metrics'),
 
+    url(r'^provision/completed/(?P<hostname>.+)$', 'xenserver.views.complete_provision', name='complete_provision'),
+
     # Authentication
     url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.html'}),
     url(r'^accounts/logout/$', 'django.contrib.auth.views.logout', {'next_page': '/'}, name='auth_logout'),

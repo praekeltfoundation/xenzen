@@ -24,7 +24,7 @@ from celery.task.control import revoke
 def getIp(pool):
     gateway = iputil.stoip(pool.gateway)
     last_ip = pool.addresses_set.all().aggregate(Max('ip_int'))['ip_int__max']
-    
+
     ipnl, first, last, cidr = iputil.ipcalc(pool.subnet)
 
     if not last_ip:
@@ -41,14 +41,12 @@ def getIp(pool):
             empty = Addresses.objects.filter(
                 vm=None, pool=pool).order_by('ip_int')[0]
             next_ip = empty.ip_int
-
-        except:
+        except Exception, e:
             # Slowest last resort
             addresses = [i.ip_int for i in pool.addresses_set.all()]
             for ip in range(first, last):
                 if (ip != gateway) and (ip not in addresses):
-                    next_ip = ip
-                    break
+                    return iputil.iptos(ip)
 
             return None
 
@@ -686,8 +684,8 @@ def provision(request):
 
             # Send provisioning to celery
             if not settings.PRETEND_MODE:
-                task = tasks.create_vm.delay(
-                    server, template, host, domain, ip, netmask, gateway, url)
+                tasks.create_vm.delay(vmobj, server, template, host, domain,
+                    ip, netmask, gateway, url,)
 
             log_action(request.user, 3, "Provisioned VM %s on %s" % (
                 hostname,
@@ -705,11 +703,18 @@ def provision(request):
         'form': form
     })
 
+def complete_provision(request, hostname):
+    vm = XenVM.objects.get(name=hostname)
+
+    # Send our completion task to Celery
+    tasks.complete_vm.delay(vm)
+
+    return HttpResponse(json.dumps('{}'), content_type="application/json")
+
 def get_preseed(request, id):
     template = Template.objects.get(id=id)
 
     return HttpResponse(template.preseed, content_type="text/plain")
-
 
 @login_required
 def get_metrics(request, id):
