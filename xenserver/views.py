@@ -24,7 +24,7 @@ from celery.task.control import revoke
 def getIp(pool):
     gateway = iputil.stoip(pool.gateway)
     last_ip = pool.addresses_set.all().aggregate(Max('ip_int'))['ip_int__max']
-    
+
     ipnl, first, last, cidr = iputil.ipcalc(pool.subnet)
 
     if not last_ip:
@@ -41,14 +41,12 @@ def getIp(pool):
             empty = Addresses.objects.filter(
                 vm=None, pool=pool).order_by('ip_int')[0]
             next_ip = empty.ip_int
-
-        except:
+        except Exception, e:
             # Slowest last resort
             addresses = [i.ip_int for i in pool.addresses_set.all()]
             for ip in range(first, last):
                 if (ip != gateway) and (ip not in addresses):
-                    next_ip = ip
-                    break
+                    return iputil.iptos(ip)
 
             return None
 
