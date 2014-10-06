@@ -140,7 +140,6 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
-    'south',
     'gunicorn',
     'django_nose',
     'raven.contrib.django.raven_compat',
@@ -183,6 +182,7 @@ LOGGING = {
 # Celery configuration options
 BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_IGNORE_RESULT = True
 
 # Uncomment if you're running in DEBUG mode and you want to skip the broker
 # and execute tasks immediate instead of deferring them to the queue / workers.
