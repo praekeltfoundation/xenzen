@@ -290,9 +290,26 @@ def updateVms():
         updateServer.delay(xenserver)
 
 @task(time_limit=120)
-def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_url):
-    session = getSession(xenserver.hostname,
-            xenserver.username, xenserver.password)
+def complete_vm(vm):
+    # Hook task for post provisioning cleanup
+    xenserver = vm.xenserver
+
+    session = getSession(xenserver.hostname, xenserver.username,
+        xenserver.password)
+
+    rec = session.xenapi.VM.get_record(vm.xsref)
+
+    vbds = rec['VBDs']
+
+    for vbd in vbds:
+        vbrec = session.xenapi.VBD.get_record(vbd)
+        if vbrec['type'] == 'CD' and not vbrec['empty']:
+            session.xenapi.VBD.eject(vbd)
+
+@task(time_limit=120)
+def create_vm(vm, xenserver, template, name, domain, ip, subnet, gateway, preseed_url):
+    session = getSession(xenserver.hostname, xenserver.username,
+        xenserver.password)
 
     mem_bytes = str(template.memory * (1024*1024))
     cores = str(template.cores)
@@ -397,6 +414,10 @@ def create_vm(xenserver, template, name, domain, ip, subnet, gateway, preseed_ur
 
     # Create virtual machine
     VM_ref=session.xenapi.VM.create(vmprop)
+
+    # Update our OpaqueRef
+    vm.xsref = VM_ref
+    vm.save()
 
     vif = { 'device': '0',
             'network': network,
