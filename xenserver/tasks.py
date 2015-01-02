@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from celery import task
 
-from xenserver.models import XenServer, XenVM, XenMetrics, AddressPool, Addresses
+from xenserver.models import XenServer, XenVM, XenMetrics, AddressPool, Addresses, Network
 from xenserver import iputil
 
 def getSession(hostname, username, password):
@@ -242,6 +242,27 @@ def updateServer(xenserver):
         ts = []
 
     xenserver.save()
+
+    # Get network info
+    networks = session.xenapi.network.get_all_records()
+
+    for ref, network in networks.items():
+        if network['PIFs']:
+            pifid = network['PIFs'][0]
+            pif = session.xenapi.PIF.get_record(pifid)
+
+            try:
+                net = Network.objects.get(
+                    netid=ref, pifid=pifid, server=xenserver)
+            except:
+                net = Network.objects.create(
+                    server=xenserver,
+                    netid=ref,
+                    pifid=pifid,
+                    label=pif['device'],
+                    vlan=int(pif['VLAN'])
+                )
+                net.save()
 
     # List all the VM objects
     #allvms = session.xenapi.host.get_resident_VMs(host)

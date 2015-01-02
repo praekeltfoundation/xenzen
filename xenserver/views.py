@@ -312,7 +312,7 @@ def pool_create(request, zone):
             return redirect('zone_view', id=zone)
     else:
         form = forms.PoolForm()
-        form.fields['server'].queryset = XenServer.objects.filter(zone=zoneobj)
+        #form.fields['server'].queryset = XenServer.objects.filter(zone=zoneobj)
 
     return render(request, 'zones/pool_edit.html', {
         'form': form

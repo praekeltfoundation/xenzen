@@ -45,11 +45,21 @@ class Project(models.Model):
 
 class AddressPool(models.Model):
     subnet = models.CharField(max_length=128, unique=True)
-    gateway = models.CharField(max_length=128)
+    gateway = models.CharField(max_length=128, blank=True)
     zone = models.ForeignKey(Zone)
-    server = models.ForeignKey(XenServer, null=True, blank=True)
-    version = models.IntegerField()
+    version = models.IntegerField(default=4)
 
+class Network(models.Model):
+    server = models.ForeignKey(XenServer)
+
+    label = models.CharField(max_length=255)
+    vlan = models.IntegerField(default=-1)
+
+    pifid = models.CharField(max_length=255, unique=True)
+    netid = models.CharField(max_length=255, unique=True)
+
+    address_pool = models.ForeignKey(AddressPool, null=True, blank=True)
+ 
 class XenVM(models.Model):
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=128)
