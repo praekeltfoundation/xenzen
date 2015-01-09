@@ -16,6 +16,9 @@ class XenServer(models.Model):
     username = models.CharField(max_length=255)
     password = models.CharField(max_length=255)
 
+    asset_tag = models.CharField(max_length=255, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+
     memory = models.IntegerField(default=1)
     mem_free = models.IntegerField(default=1)
     cpu_util = models.IntegerField(default=1)
