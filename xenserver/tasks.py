@@ -413,7 +413,12 @@ def create_vm(vm, xenserver, template, name, domain, ip, subnet, gateway, presee
     }
 
     # Create virtual machine
-    VM_ref=session.xenapi.VM.create(vmprop)
+    try:
+        VM_ref=session.xenapi.VM.create(vmprop)
+    except Exception, e:
+        vm.delete()
+        raise e
+        return
 
     # Update our OpaqueRef
     vm.xsref = VM_ref
