@@ -39,9 +39,11 @@ class UserForm(BaseModelForm):
 class ZoneForm(BaseModelForm):
     class Meta:
         model = models.Zone
+        exclude = ()
 
 class GroupForm(BaseModelForm):
     class Meta:
+        exclude = ()
         model = models.Project
 
 class PoolForm(BaseModelForm):
@@ -111,4 +113,5 @@ class TemplateForm(BaseModelForm):
 
     class Meta:
         model = models.Template
+        exclude = ()
 

@@ -26,6 +26,8 @@ class XenServer(models.Model):
 
     zone = models.ForeignKey(Zone)
 
+    active = models.BooleanField(default=True)
+
     def __unicode__(self):
         return self.hostname
 

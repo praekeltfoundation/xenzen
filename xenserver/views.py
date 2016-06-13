@@ -605,15 +605,15 @@ def provision(request):
             # Server autoselect
             if not server:
                 if zone:
-                    servers = XenServer.objects.filter(zone=zone).order_by('hostname')
+                    servers = XenServer.objects.filter(zone=zone, active=True).order_by('hostname')
                 else:
-                    servers = XenServer.objects.all().order_by('hostname')
+                    servers = XenServer.objects.filter(active=True).order_by('hostname')
 
                 slots = {}
 
                 for s in servers:
                     mem_total = s.memory
-                    mem_free = s.mem_free
+                    mem_free = s.mem_free - 128
 
                     xvms = XenVM.objects.filter(xenserver=s).exclude(status='Running')
                     for vm in xvms:

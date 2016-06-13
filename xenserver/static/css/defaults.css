@@ -158,13 +158,13 @@ tr.warning a{
 .table>thead>tr>th.info, .table>tbody>tr>th.info, .table>tfoot>tr>th.info,
 .table>thead>tr.info>td, .table>tbody>tr.info>td, .table>tfoot>tr.info>td,
 .table>thead>tr.info>th, .table>tbody>tr.info>th, .table>tfoot>tr.info>th {
-    background-color:#20374B;
+    background-color: #20374B;
     color: #64AEEC;
 }
 
 .table-hover>tbody>tr>td.info:hover, .table-hover>tbody>tr>th.info:hover,
 .table-hover>tbody>tr.info:hover>td, .table-hover>tbody>tr.info:hover>th {
-    background-color:#336692
+    background-color: #336692;
 }
 
 tr.info a{
@@ -172,7 +172,7 @@ tr.info a{
 }
 
 .table-hover>tbody>tr:hover>td, .table-hover>tbody>tr:hover>th {
-    background-color:#20374B;
+    background-color: #20374B;
 }
 
 table.table thead {
@@ -197,8 +197,7 @@ table.table {
     color: #64AEEC;
 }
 
-.btn-default:hover, .btn-default:focus, .btn-default:active, 
-.btn-default.active, .open .dropdown-toggle.btn-default {
+.btn-default:hover, .btn-default:focus, .btn-default:active, .btn-default.active, .open .dropdown-toggle.btn-default {
     background: #222;
 }
 
@@ -210,12 +209,13 @@ table.table {
 ul.dropdown-menu {
     background: #222;
 }
-ul.dropdown-menu a{
+
+ul.dropdown-menu a {
     color: #64AEEC;
 }
 
 .dropdown-menu>li>a:hover, .dropdown-menu>li>a:focus {
-    background:#333;
+    background: #333;
     color: #fff;
 }
 
@@ -224,7 +224,7 @@ ul.dropdown-menu a{
 }
 
 .navbar-right {
-    padding-top:7px;
+    padding-top: 7px;
 }
 
 .nvd3 {

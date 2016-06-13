@@ -1,4 +1,4 @@
-Django
+Django<1.9
 gunicorn
 python-memcached
 raven
@@ -10,7 +10,7 @@ celery
 redis
 django-celery
 django-celery-email
-django-social-auth
+django-social-auth==0.7.28
 django-crispy-forms
 pep8
 pyflakes
