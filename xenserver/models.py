@@ -55,6 +55,25 @@ class AddressPool(models.Model):
     server = models.ForeignKey(XenServer, null=True, blank=True)
     version = models.IntegerField()
 
+class Template(models.Model):
+    name = models.CharField(max_length=255)
+
+    cores = models.IntegerField()
+    memory = models.IntegerField()
+
+    iso = models.CharField(max_length=255)
+
+    diskspace = models.IntegerField()
+    preseed = models.TextField(blank=True)
+
+    bootopts = models.CharField(max_length=255, blank=True)
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.__unicode__().encode('utf-8', 'replace')
+
 class XenVM(models.Model):
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=128)
@@ -69,6 +88,8 @@ class XenVM(models.Model):
     xenserver = models.ForeignKey(XenServer, null=True)
 
     project = models.ForeignKey(Project, null=True)
+
+    template = models.ForeignKey(Template, null=True, default=None)
 
     def __unicode__(self):
         return self.name
@@ -94,23 +115,6 @@ class XenMetrics(models.Model):
     timeblob = models.TextField()
     datablob = models.TextField()
     
-class Template(models.Model):
-    name = models.CharField(max_length=255)
-
-    cores = models.IntegerField()
-    memory = models.IntegerField()
-
-    iso = models.CharField(max_length=255)
-
-    diskspace = models.IntegerField()
-    preseed = models.TextField(blank=True)
-
-    def __unicode__(self):
-        return self.name
-
-    def __str__(self):
-        return self.__unicode__().encode('utf-8', 'replace')
-
 class AuditLog(models.Model):
     username = models.ForeignKey(User, null=True)
 

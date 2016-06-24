@@ -359,7 +359,7 @@ def create_vm(vm, xenserver, template, name, domain, ip, subnet, gateway, presee
         'acpi': '1'
     }
 
-    boot_params = 'debian-installer/locale=en_ZA.UTF-8 console-setup/layoutcode=us console-setup/ask_detect=false interface=eth0 netcfg/get_hostname=%(name)s netcfg/get_domain=%(domain)s netcfg/disable_autoconfig=true netcfg/get_ipaddress=%(ip)s netcfg/get_netmask=%(subnet)s netcfg/get_gateway=%(gateway)s netcfg/get_nameservers=8.8.8.8 preseed/url=%(url)s' % {
+    boot_params = template.bootopts % {
         'ip': ip, 
         'subnet': subnet, 
         'gateway': gateway, 
@@ -408,7 +408,7 @@ def create_vm(vm, xenserver, template, name, domain, ip, subnet, gateway, presee
             'linux_template': 'true'
         },
         'recommendations': '',
-        'PV_args': '-- quiet console=hvc0 %s' % boot_params,
+        'PV_args': '%s -- quiet console=hvc0' % boot_params,
         'suspend_SR': local_sr
     }
 

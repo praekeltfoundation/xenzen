@@ -664,9 +664,6 @@ def provision(request):
                 if not ip:
                     raise Exception('Oh dear, no more IP addresses')
 
-            # Get a preseed URL
-            url = urlparse.urljoin(request.build_absolute_uri(),
-                reverse('get_preseed', kwargs={'id':template.id}))
 
             vmobj = XenVM.objects.create(
                 xsref='TEMPREF'+uuid.uuid1().hex,
@@ -675,10 +672,15 @@ def provision(request):
                 sockets=template.cores,
                 memory=template.memory,
                 xenserver=server,
+                template=template,
                 project=group,
                 ip=ip
             )
             vmobj.save()
+
+            # Get a preseed URL
+            url = urlparse.urljoin(request.build_absolute_uri(),
+                reverse('get_preseed', kwargs={'id':vmobj.id}))
 
             addr = tasks.updateAddress(server, vmobj, ip, pool=pool)
 
@@ -712,9 +714,30 @@ def complete_provision(request, hostname):
     return HttpResponse(json.dumps('{}'), content_type="application/json")
 
 def get_preseed(request, id):
-    template = Template.objects.get(id=id)
+    vm = XenVM.objects.get(id=id)
 
-    return HttpResponse(template.preseed, content_type="text/plain")
+    pool = Addresses.objects.get(ip=vm.ip).pool
+
+    gateway = pool.gateway
+    netmask = iputil.getNetmask(pool.subnet)
+
+    domain = vm.name.split('.', 1)[-1]
+
+    svars = {
+        'ip': vm.ip,
+        'subnet': netmask,
+        'gateway': pool.gateway,
+        'name': vm.name,
+        'domain': domain,
+    }
+
+    seed = vm.template.preseed
+    for k, v in svars.items():
+        vn = "$(%s)" % k.upper()
+        if vn in seed:
+            seed = seed.replace(vn, v)
+
+    return HttpResponse(seed, content_type="text/plain")
 
 @login_required
 def get_metrics(request, id):
