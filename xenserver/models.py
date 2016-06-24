@@ -66,7 +66,7 @@ class Template(models.Model):
     diskspace = models.IntegerField()
     preseed = models.TextField(blank=True)
 
-    bootopts = models.CharField(max_length=255, blank=True)
+    bootopts = models.CharField(max_length=512, blank=True)
 
     def __unicode__(self):
         return self.name
