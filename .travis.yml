@@ -8,6 +8,6 @@ cache:
 install:
   - pip install --upgrade pip
   - pip install -r requirements.pip
-  - pip install pytest pytest-django
+  - pip install --upgrade pytest pytest-django
 script:
   - py.test --ds=skeleton.settings xenserver/
