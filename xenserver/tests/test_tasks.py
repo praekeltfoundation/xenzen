@@ -7,94 +7,8 @@ from django.test import TestCase
 from xenserver.models import Template, XenVM
 from xenserver.tasks import _create_vm
 from xenserver.tests.fake_xen_server import FakeXenServer
-
-
-class NVType(object):
-    """
-    An object to represent a missing value.
-    """
-    def __repr__(self):
-        return "<NO VALUE>"
-
-
-NO_VALUE = NVType()
-
-
-class AVType(object):
-    """
-    An object to represent any value.
-    """
-    def __repr__(self):
-        return "<ANY VALUE>"
-
-    def __eq__(self, other):
-        return True
-
-
-ANY_VALUE = AVType()
-
-
-class ExpectedXenServerVM(object):
-    """
-    A matcher for a XenServer VM object.
-    """
-    default_fields = {
-        'name_label': NO_VALUE,
-        'name_description': '',
-        'user_version': '1',
-        'affinity': '',
-        'is_a_template': False,
-        'auto_power_on': False,
-        'memory_static_max': NO_VALUE,
-        'memory_static_min': '536870912',
-        'memory_dynamic_max': NO_VALUE,
-        'memory_dynamic_min': '536870912',
-        'VCPUs_max': NO_VALUE,
-        'VCPUs_at_startup': NO_VALUE,
-        'VCPUs_params': {},
-        'actions_after_shutdown': 'destroy',
-        'actions_after_reboot': 'restart',
-        'actions_after_crash': 'restart',
-        'PV_kernel': '',
-        'PV_ramdisk': '',
-        'PV_bootloader': 'eliloader',
-        'PV_bootloader_args': '',
-        'PV_legacy_args': '',
-        'HVM_boot_policy': '',
-        'HVM_boot_params': {},
-        'platform': {
-            'nx': 'true',
-            'apic': 'true',
-            'viridian': 'true',
-            'pae': 'true',
-            'acpi': '1',
-        },
-        'PCI_bus': '',
-        'other_config': {
-            'auto_poweron': 'true',
-            'mac_seed': ANY_VALUE,
-            'install-distro': 'debianlike',
-            'base_template_name': 'Ubuntu Precise Pangolin 12.04 (64-bit)',
-            'install-arch': 'amd64',
-            'install-methods': 'cdrom,http,ftp',
-            'install-repository': 'cdrom',
-            'debian-release': 'precise',
-            'linux_template': 'true'
-        },
-        'recommendations': '',
-        'PV_args': NO_VALUE,
-        'suspend_SR': NO_VALUE,
-    }
-
-    def __init__(self, **fields):
-        self.fields = fields
-        self.expected_fields = {}
-        self.expected_fields.update(self.default_fields)
-        self.expected_fields.update(self.fields)
-        self.expected_fields['other_config']['mac_seed']
-
-    def assertMatch(self, other):
-        assert self.expected_fields == other
+from xenserver.tests.matchers import (
+    ExpectedXenServerVM, ExpectedXenServerVIF, ExtractValue)
 
 
 class TestCreateVM(TestCase):
@@ -131,6 +45,12 @@ class TestCreateVM(TestCase):
 
         vm.refresh_from_db()
         assert vm.xsref != ''
+
+        # The VM data structure should match the values we passed to
+        # _create_vm().
+        ev_VIF = ExtractValue("VIF")
+        ev_VBD1 = ExtractValue("VBD1")
+        ev_VBD2 = ExtractValue("VBD2")
         exvm = ExpectedXenServerVM(
             PV_args=" -- quiet console=hvc0",
             name_label="None.None",
@@ -139,6 +59,17 @@ class TestCreateVM(TestCase):
             memory_static_max=str(2048*1024*1024),
             memory_dynamic_max=str(2048*1024*1024),
             suspend_SR=self.local_sr,
+            VIFs=[ev_VIF],
+            VBDs=[ev_VBD1, ev_VBD2],
         )
-        assert len(xenserver.VMs) == 1
+        assert xenserver.VMs.keys() == [vm.xsref]
         exvm.assertMatch(xenserver.VMs[vm.xsref])
+
+        # The VIF data structures should match the values we passed to
+        # _create_vm().
+        exvif = ExpectedXenServerVIF(VM=vm.xsref, network=net)
+        assert xenserver.VIFs.keys() == [ev_VIF.value]
+        exvif.assertMatch(xenserver.VIFs[ev_VIF.value])
+
+        # The VM should be started.
+        assert xenserver.VM_operations == [(vm.xsref, "start")]

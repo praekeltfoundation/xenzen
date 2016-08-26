@@ -5,6 +5,10 @@ import xmlrpclib
 import xenapi
 
 
+def mkref(name):
+    return "Ref:%s:%s" % (name, uuid4())
+
+
 class FakeXenServer(object):
     """
     Fake XenServer to use in tests.
@@ -25,6 +29,7 @@ class FakeXenServer(object):
         self.VMs = {}
         self.VIFs = {}
         self.VBDs = {}
+        self.VM_operations = []
 
     def getSession(self, hostname=hostname, username=username,
                    password=password):
@@ -59,26 +64,27 @@ class FakeXenServer(object):
         kw['name_label'] = name_label
         kw['type'] = type
         kw.setdefault('VDIs', [])
-        ref = "Ref:%s" % (uuid4(),)
+        ref = mkref("SR")
         self.SRs[ref] = kw
         return ref
 
     def add_VDI(self, SR, name_label, **kw):
         kw['SR'] = SR
         kw['name_label'] = name_label
-        ref = "Ref:%s" % (uuid4(),)
+        ref = mkref("VDI")
         self.SRs[SR]['VDIs'].append(ref)
         self.VDIs[ref] = kw
         return ref
 
     def add_network(self, **kw):
-        ref = "Ref:%s" % (uuid4(),)
+        ref = mkref("network")
         kw.setdefault('PIFs', [])
         self.networks[ref] = kw
         return ref
 
     def add_PIF(self, network, gateway, **kw):
-        ref = "Ref:%s" % (uuid4(),)
+        ref = mkref("PIF")
+        kw['network'] = network
         kw['gateway'] = gateway
         self.networks[network]['PIFs'].append(ref)
         self.PIFs[ref] = kw
@@ -86,7 +92,7 @@ class FakeXenServer(object):
 
     def h_session_login_with_password(self, username, password):
         assert (username, password) == (self.username, self.password)
-        ref = "Ref:%s" % (uuid4(),)
+        ref = mkref("session")
         self.sessions[ref] = None
         return ref
 
@@ -112,35 +118,39 @@ class FakeXenServer(object):
 
     def h_PIF_get_network(self, session, ref):
         assert session in self.sessions
-        return self.PIFs.keys()
+        return self.PIFs[ref]["network"]
 
     def h_VM_create(self, session, params):
         assert session in self.sessions
-        ref = "Ref:%s" % (uuid4(),)
+        ref = mkref("VM")
         self.VMs[ref] = deepcopy(params)
         return ref
 
     def h_VIF_create(self, session, params):
         assert session in self.sessions
-        ref = "Ref:%s" % (uuid4(),)
+        ref = mkref("VIF")
+        VM = params["VM"]
+        self.VMs[VM].setdefault("VIFs", []).append(ref)
         self.VIFs[ref] = deepcopy(params)
         return ref
 
     def h_VDI_create(self, session, params):
         assert session in self.sessions
-        ref = "Ref:%s" % (uuid4(),)
+        ref = mkref("VDI")
         self.VDIs[ref] = deepcopy(params)
         return ref
 
     def h_VBD_create(self, session, params):
         assert session in self.sessions
-        ref = "Ref:%s" % (uuid4(),)
+        ref = mkref("VBD")
+        VM = params["VM"]
+        self.VMs[VM].setdefault("VBDs", []).append(ref)
         self.VBDs[ref] = deepcopy(params)
         return ref
 
     def h_VM_start(self, session, ref, start_paused, force):
         assert session in self.sessions
-        print "start"
+        self.VM_operations.append((ref, "start"))
         return ""
 
     def h_session_logout(self, session):
