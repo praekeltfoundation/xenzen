@@ -310,7 +310,10 @@ def complete_vm(vm):
 def create_vm(vm, xenserver, template, name, domain, ip, subnet, gateway, preseed_url):
     session = getSession(xenserver.hostname, xenserver.username,
         xenserver.password)
+    return _create_vm(session, vm, template, name, domain, ip, subnet, gateway, preseed_url)
 
+
+def _create_vm(session, vm, template, name, domain, ip, subnet, gateway, preseed_url):
     mem_bytes = str(template.memory * (1024*1024))
     cores = str(template.cores)
     disk_bytes = str(template.diskspace * (1024*1024*1024))
