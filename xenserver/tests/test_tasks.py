@@ -2,7 +2,6 @@
 Some quick and dirty tests for a very small subset of the code.
 """
 
-from django.test import TestCase
 import pytest
 
 from xenserver.models import Template, XenVM
@@ -12,7 +11,8 @@ from xenserver.tests.matchers import (
     ExpectedXenServerVM, ExpectedXenServerVIF, ExtractValues, MatchSorted)
 
 
-class TestCreateVM(TestCase):
+@pytest.mark.django_db
+class TestCreateVM(object):
     def setup_xs_storage(self, xenserver, iso_names=("installer.iso",)):
         self.local_SR = xenserver.add_SR('Local storage', 'lvm')
         self.iso_SR = xenserver.add_SR('ISOs', 'iso')
