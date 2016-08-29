@@ -60,6 +60,8 @@ class FakeXenServer(object):
         assert handler is not None
         return handler(*args)
 
+    # State management helpers.
+
     def add_SR(self, name_label, type, **kw):
         kw['name_label'] = name_label
         kw['type'] = type
@@ -89,6 +91,28 @@ class FakeXenServer(object):
         self.networks[network]['PIFs'].append(ref)
         self.PIFs[ref] = kw
         return ref
+
+    def add_net_PIF(self, gateway, net_kw={}, PIF_kw={}):
+        net_ref = self.add_network(**net_kw)
+        PIF_ref = self.add_PIF(net_ref, gateway=gateway, **PIF_kw)
+        return net_ref, PIF_ref
+
+    def list_network_VIFs_for_VM(self, VM):
+        VIFs = []
+        for ref, VIF in self.VIFs.items():
+            if VIF["VM"] == VM:
+                VIFs.append((VIF["network"], ref))
+        return sorted(VIFs)
+
+    def list_SR_VBDs_for_VM(self, VM):
+        VDI_SRs = {ref: VDI["SR"] for ref, VDI in self.VDIs.items()}
+        VBDs = []
+        for ref, VBD in self.VBDs.items():
+            if VBD["VM"] == VM:
+                VBDs.append((VDI_SRs[VBD["VDI"]], ref))
+        return sorted(VBDs)
+
+    # XMLRPC handler methods.
 
     def h_session_login_with_password(self, username, password):
         assert (username, password) == (self.username, self.password)

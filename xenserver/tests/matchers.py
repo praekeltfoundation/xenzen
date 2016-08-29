@@ -5,43 +5,53 @@ Some helpers for testing XenServer stuff.
 from copy import deepcopy
 
 
-class NVType(object):
+class BaseMatcher(object):
     """
-    An object to represent a missing value.
+    The base class for a matcher that does fancy equality checks.
     """
-    def __repr__(self):
-        return "<NO VALUE>"
+    def match(self, other):
+        raise NotImplementedError()
 
     def __eq__(self, other):
-        return False
+        return self.match(other)
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        return not self.match(other)
 
 
-NO_VALUE = NVType()
-
-
-class AVType(object):
+class GenericMatcher(BaseMatcher):
     """
-    An object to represent any value.
+    A matcher that accepts an arbitrary match function.
     """
+    def __init__(self, match, repr_str):
+        self._match_func = match
+        self._repr_str = repr_str
+
+    def match(self, other):
+        return self._match_func(other)
+
     def __repr__(self):
-        return "<ANY VALUE>"
-
-    def __eq__(self, other):
-        return True
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
+        return self._repr_str
 
 
-ANY_VALUE = AVType()
+NO_VALUE = GenericMatcher(lambda _: False, "<NO VALUE>")
+ANY_VALUE = GenericMatcher(lambda _: True, "<ANY VALUE>")
 
 
-class ExtractValue(object):
+class MatchSorted(BaseMatcher):
+    def __init__(self, expected):
+        self._expected = sorted(expected)
+
+    def match(self, other):
+        return self._expected == sorted(other)
+
+    def __repr__(self):
+        return "<SORTED %r>" % (self._expected,)
+
+
+class ExtractValue(BaseMatcher):
     """
-    A matcher that will extract whatever value it matches.
+    A matcher that will extract whatever value it's compared to.
     """
     def __init__(self, name):
         self.name = name
@@ -50,17 +60,29 @@ class ExtractValue(object):
     def __repr__(self):
         return "<ExtractValue %s=%r>" % (self.name, self.value)
 
-    def __eq__(self, other):
+    def __cmp__(self, other):
+        return cmp(self.value, other)
+
+    def match(self, other):
         if self.value is not NO_VALUE:
             return self.value == other
         self.value = other
         return True
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
+
+class ExtractValues(object):
+    """
+    A container for working with multiple extracted values more easily.
+    """
+    def __init__(self, *names):
+        for name in names:
+            setattr(self, name, ExtractValue(name))
+
+    def values(self, *names):
+        return [getattr(self, name).value for name in names]
 
 
-class ExpectedXenServerObject(object):
+class ExpectedXenServerObject(BaseMatcher):
     """
     A base matcher for XenServer objects.
     """
@@ -71,8 +93,8 @@ class ExpectedXenServerObject(object):
         self.expected_fields = deepcopy(self.default_fields)
         self.expected_fields.update(self.fields)
 
-    def assertMatch(self, other):
-        assert self.expected_fields == other
+    def match(self, other):
+        return self.expected_fields == other
 
     def __repr__(self):
         return "<%s %r>" % (type(self).__name__, self.expected_fields)
