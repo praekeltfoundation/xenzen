@@ -307,13 +307,17 @@ def complete_vm(vm):
             session.xenapi.VBD.eject(vbd)
 
 @task(time_limit=120)
-def create_vm(vm, xenserver, template, name, domain, ip, subnet, gateway, preseed_url):
-    session = getSession(xenserver.hostname, xenserver.username,
-        xenserver.password)
-    return _create_vm(session, vm, template, name, domain, ip, subnet, gateway, preseed_url)
+def create_vm(vm, xenserver, template, name, domain, ip, subnet, gateway,
+              preseed_url, extra_network_bridges=()):
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
+    return _create_vm(
+        session, vm, template, name, domain, ip, subnet, gateway, preseed_url,
+        extra_network_bridges)
 
 
-def _create_vm(session, vm, template, name, domain, ip, subnet, gateway, preseed_url):
+def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
+               preseed_url, extra_network_bridges):
     mem_bytes = str(template.memory * (1024*1024))
     cores = str(template.cores)
     disk_bytes = str(template.diskspace * (1024*1024*1024))
@@ -353,6 +357,18 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway, preseed
 
     if not network:
         raise NetworkError('Unable to locate VIF network')
+
+    extra_networks = []
+    for br in extra_network_bridges:
+        found = False
+        for net in session.xenapi.network.get_all():
+            r = session.xenapi.network.get_record(net)
+            if r['bridge'] == br:
+                extra_networks.append(net)
+                found = True
+                break
+        if not found:
+            raise NetworkError('Unable to locate extra network')
 
     platfrm = {
         'nx': 'true',
@@ -439,6 +455,20 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway, preseed
 
     # Create and attach network interface
     session.xenapi.VIF.create(vif)
+
+    devicenum = 0
+    for extra_network in extra_networks:
+        devicenum += 1
+        session.xenapi.VIF.create({
+            'device': str(devicenum),
+            'network': extra_network,
+            'VM': VM_ref,
+            'MAC': '',
+            'MTU': '1500',
+            'qos_algorithm_type': '',
+            'qos_algorithm_params': {},
+            'other_config': {},
+        })
 
     vdisk = {
         'name_label': vmname + ' 0',

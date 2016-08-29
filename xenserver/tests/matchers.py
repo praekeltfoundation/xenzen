@@ -158,7 +158,7 @@ class ExpectedXenServerVIF(ExpectedXenServerObject):
     A matcher for a XenServer VIF object.
     """
     default_fields = {
-        'device': '0',
+        'device': NO_VALUE,
         'network': NO_VALUE,
         'VM': NO_VALUE,
         'MAC': '',

@@ -78,24 +78,21 @@ class FakeXenServer(object):
         self.VDIs[ref] = kw
         return ref
 
-    def add_network(self, **kw):
+    def add_network(self, bridge, **kw):
         ref = mkref("network")
+        kw['bridge'] = bridge
         kw.setdefault('PIFs', [])
         self.networks[ref] = kw
         return ref
 
-    def add_PIF(self, network, gateway, **kw):
+    def add_PIF(self, network, device, gateway="", **kw):
         ref = mkref("PIF")
         kw['network'] = network
+        kw['device'] = device
         kw['gateway'] = gateway
         self.networks[network]['PIFs'].append(ref)
         self.PIFs[ref] = kw
         return ref
-
-    def add_net_PIF(self, gateway, net_kw={}, PIF_kw={}):
-        net_ref = self.add_network(**net_kw)
-        PIF_ref = self.add_PIF(net_ref, gateway=gateway, **PIF_kw)
-        return net_ref, PIF_ref
 
     def list_network_VIFs_for_VM(self, VM):
         VIFs = []
@@ -131,6 +128,14 @@ class FakeXenServer(object):
     def h_VDI_get_record(self, session, ref):
         assert session in self.sessions
         return self.VDIs[ref]
+
+    def h_network_get_all(self, session):
+        assert session in self.sessions
+        return self.networks.keys()
+
+    def h_network_get_record(self, session, ref):
+        assert session in self.sessions
+        return self.networks[ref]
 
     def h_PIF_get_all(self, session):
         assert session in self.sessions
