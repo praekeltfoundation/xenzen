@@ -359,9 +359,10 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
         raise NetworkError('Unable to locate VIF network')
 
     extra_networks = []
+    xen_networks = session.xenapi.network.get_all()
     for br in extra_network_bridges:
         found = False
-        for net in session.xenapi.network.get_all():
+        for net in xen_networks:
             r = session.xenapi.network.get_record(net)
             if r['bridge'] == br:
                 extra_networks.append(net)
