@@ -26,7 +26,7 @@ class TestProvision(object):
         zone = Zone.objects.create(name="foozone")
         AddressPool.objects.create(
             subnet="10.0.0.0/24", gateway="10.1.2.3", zone=zone, version=4)
-        mem = 64*1024*1204*1024
+        mem = 64*1024*1024*1024
         return XenServer.objects.create(
             hostname=hostname, username="u", password="p", zone=zone,
             memory=mem, mem_free=mem)

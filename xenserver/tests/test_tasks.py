@@ -118,7 +118,6 @@ class TestCreateVM(object):
         # The VM should be started.
         assert xenserver.VM_operations == [(vm.xsref, "start")]
 
-    # @pytest.mark.xfail
     def test_create_vm_second_vif(self):
         """
         We can create a new VM with a second VIF.
