@@ -31,14 +31,25 @@ class TestProvision(object):
             hostname=hostname, username="u", password="p", zone=zone,
             memory=mem, mem_free=mem)
 
-    def test_provision_simple(self, monkeypatch, settings, admin_client):
+    def stub_create_vm(self, monkeypatch):
         """
-        We can create a new VM using mostly default values.
+        Replace various task functions with stubs suitable for testing the
+        views. This returns a list that every call to the create_vm task
+        populates with its args.
         """
         createvm_calls = []
         monkeypatch.setattr(tasks, 'getSession', lambda *a, **kw: "session")
         monkeypatch.setattr(
             tasks, '_create_vm', lambda *a: createvm_calls.append(a))
+        return createvm_calls
+
+    def test_provision_simple(self, monkeypatch, settings, admin_client):
+        """
+        We can create a new VM using mostly default values.
+        """
+        createvm_calls = self.stub_create_vm(monkeypatch)
+        # Run celery tasks in-process so we don't need all the remote celery
+        # worker machinery in our tests.
         settings.CELERY_ALWAYS_EAGER = True
 
         self.setup_server("srv.example.com")
@@ -69,10 +80,9 @@ class TestProvision(object):
         """
         We can create a new VM using mostly default values.
         """
-        createvm_calls = []
-        monkeypatch.setattr(tasks, 'getSession', lambda *a, **kw: "session")
-        monkeypatch.setattr(
-            tasks, '_create_vm', lambda *a: createvm_calls.append(a))
+        createvm_calls = self.stub_create_vm(monkeypatch)
+        # Run celery tasks in-process so we don't need all the remote celery
+        # worker machinery in our tests.
         settings.CELERY_ALWAYS_EAGER = True
 
         self.setup_server("srv.example.com")
