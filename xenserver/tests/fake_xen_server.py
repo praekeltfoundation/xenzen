@@ -60,6 +60,8 @@ class FakeXenServer(object):
         assert handler is not None
         return handler(*args)
 
+    # State management helpers.
+
     def add_SR(self, name_label, type, **kw):
         kw['name_label'] = name_label
         kw['type'] = type
@@ -76,19 +78,38 @@ class FakeXenServer(object):
         self.VDIs[ref] = kw
         return ref
 
-    def add_network(self, **kw):
+    def add_network(self, bridge, **kw):
         ref = mkref("network")
+        kw['bridge'] = bridge
         kw.setdefault('PIFs', [])
         self.networks[ref] = kw
         return ref
 
-    def add_PIF(self, network, gateway, **kw):
+    def add_PIF(self, network, device, gateway="", **kw):
         ref = mkref("PIF")
         kw['network'] = network
+        kw['device'] = device
         kw['gateway'] = gateway
         self.networks[network]['PIFs'].append(ref)
         self.PIFs[ref] = kw
         return ref
+
+    def list_network_VIFs_for_VM(self, VM):
+        VIFs = []
+        for ref, VIF in self.VIFs.items():
+            if VIF["VM"] == VM:
+                VIFs.append((VIF["network"], ref))
+        return sorted(VIFs)
+
+    def list_SR_VBDs_for_VM(self, VM):
+        VDI_SRs = {ref: VDI["SR"] for ref, VDI in self.VDIs.items()}
+        VBDs = []
+        for ref, VBD in self.VBDs.items():
+            if VBD["VM"] == VM:
+                VBDs.append((VDI_SRs[VBD["VDI"]], ref))
+        return sorted(VBDs)
+
+    # XMLRPC handler methods.
 
     def h_session_login_with_password(self, username, password):
         assert (username, password) == (self.username, self.password)
@@ -107,6 +128,14 @@ class FakeXenServer(object):
     def h_VDI_get_record(self, session, ref):
         assert session in self.sessions
         return self.VDIs[ref]
+
+    def h_network_get_all(self, session):
+        assert session in self.sessions
+        return self.networks.keys()
+
+    def h_network_get_record(self, session, ref):
+        assert session in self.sessions
+        return self.networks[ref]
 
     def h_PIF_get_all(self, session):
         assert session in self.sessions

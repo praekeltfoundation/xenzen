@@ -72,6 +72,8 @@ class ProvisionForm(BaseForm):
 
     ipaddress = forms.CharField(required=False, help_text='Leave blank for automatic selection')
 
+    extra_network_bridges = forms.CharField(required=False, help_text='Bridge device names for extra network devices (whitespace separated)')
+
     def clean(self):
         cleaned_data = super(ProvisionForm, self).clean()
 
@@ -90,6 +92,9 @@ class ProvisionForm(BaseForm):
                 raise forms.ValidationError("Not a valid FQDN.")
 
             cleaned_data['hostname'] = hsclean
+
+        extra_net = cleaned_data['extra_network_bridges'].split()
+        cleaned_data['extra_network_bridges'] = extra_net
 
         return cleaned_data
 

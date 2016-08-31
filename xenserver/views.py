@@ -582,6 +582,7 @@ def provision(request):
             template = provision['template']
             hostname = provision['hostname']
             host, domain = hostname.split('.', 1)
+            extra_network_bridges = provision['extra_network_bridges']
 
             if provision['group']:
                 group = provision['group']
@@ -686,8 +687,9 @@ def provision(request):
 
             # Send provisioning to celery
             if not settings.PRETEND_MODE:
-                tasks.create_vm.delay(vmobj, server, template, host, domain,
-                    ip, netmask, gateway, url,)
+                tasks.create_vm.delay(
+                    vmobj, server, template, host, domain, ip, netmask,
+                    gateway, url, extra_network_bridges)
 
             log_action(request.user, 3, "Provisioned VM %s on %s" % (
                 hostname,
