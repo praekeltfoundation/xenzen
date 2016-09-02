@@ -72,7 +72,9 @@ class ProvisionForm(BaseForm):
 
     ipaddress = forms.CharField(required=False, help_text='Leave blank for automatic selection')
 
-    extra_network_bridges = forms.CharField(required=False, help_text='Bridge device names for extra network devices (whitespace separated)')
+    extra_network_bridges = forms.CharField(required=False, help_text=(
+        'Bridge device names for extra network devices (whitespace separated)'
+        ' - for example, "xenbr1"'))
 
     def clean(self):
         cleaned_data = super(ProvisionForm, self).clean()
