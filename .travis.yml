@@ -1,6 +1,5 @@
 language: python
 python: 2.7
-
 cache:
   - pip
 
@@ -8,6 +7,12 @@ before_install:
   - pip install --upgrade pip
 install:
   - pip install -r requirements-dev.txt
+  - pip install codecov
+
 script:
-  - py.test
+  - coverage run "$(which pytest)"
+  - coverage report -m  && coverage xml
   - flake8 .
+
+after_success:
+  - codecov
