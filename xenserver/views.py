@@ -50,8 +50,8 @@ def getIp(pool):
 
 
 def log_action(user, severity, message):
-    log = AuditLog.objects.create(username=user, severity=severity,
-        message=message)
+    log = AuditLog.objects.create(
+        username=user, severity=severity, message=message)
     log.save()
 
 
@@ -361,7 +361,7 @@ def pool_edit(request, id):
 @login_required
 def pool_delete(request, id):
     pool = AddressPool.objects.get(id=id)
-    zoneid =  pool.zone.id
+    zoneid = pool.zone.id
 
     pool.delete()
 
@@ -651,13 +651,13 @@ def provision(request):
                     if mem_free > template.memory:
                         slot = int(mem_free/1024.0)
 
-                        if not slot in slots:
+                        if slot not in slots:
                             slots[slot] = []
 
                         slots[slot].append((s, s.cpu_util))
 
                 memory_space = sorted(slots.keys())[0]
-                cpu_space = sorted(slots[memory_space], key = itemgetter(1))[0]
+                cpu_space = sorted(slots[memory_space], key=itemgetter(1))[0]
 
                 server = cpu_space[0]
 
@@ -707,8 +707,9 @@ def provision(request):
             vmobj.save()
 
             # Get a preseed URL
-            url = urlparse.urljoin(request.build_absolute_uri(),
-                reverse('get_preseed', kwargs={'id':vmobj.id}))
+            url = urlparse.urljoin(
+                request.build_absolute_uri(),
+                reverse('get_preseed', kwargs={'id': vmobj.id}))
 
             addr = tasks.updateAddress(server, vmobj, ip, pool=pool)
 
@@ -783,6 +784,6 @@ def get_metrics(request, id):
         t = json.loads(m.timeblob)
         md = json.loads(m.datablob)
 
-        d[m.key] = [[i*1000, j] for i,j in zip(t, md)]
+        d[m.key] = [[i*1000, j] for i, j in zip(t, md)]
 
     return HttpResponse(json.dumps(d), content_type="application/json")
