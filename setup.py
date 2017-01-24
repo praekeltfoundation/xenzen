@@ -43,7 +43,6 @@ setup(
         'django-social-auth == 0.7.28',
         'lxml',
         'psycopg2',
-        'python-memcached',
         'pyyaml',
         'raven',
         'redis',
