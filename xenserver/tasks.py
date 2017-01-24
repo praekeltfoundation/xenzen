@@ -1,15 +1,15 @@
-import xenapi
+import json
 import time
 import urllib2
-import json
-
-from lxml import etree
 from uuid import uuid4
 
 from celery import task
+from lxml import etree
 
-from xenserver.models import XenServer, XenVM, XenMetrics, AddressPool, Addresses
+import xenapi
 from xenserver import iputil
+from xenserver.models import (
+    Addresses, AddressPool, XenMetrics, XenServer, XenVM)
 
 def getSession(hostname, username, password):
     url = 'https://%s:443/' % (hostname)
@@ -217,7 +217,7 @@ def updateServer(xenserver):
     session = getSession(xenserver.hostname,
         xenserver.username, xenserver.password)
 
-    # get server info 
+    # get server info
     host = session.xenapi.host.get_all()[0]
     host_info = session.xenapi.host.get_record(host)
     cores = int(host_info['cpu_info']['cpu_count'])
@@ -258,7 +258,7 @@ def updateServer(xenserver):
     for vm in XenVM.objects.filter(xsref__startswith='TEMPREF'):
         vmrefs.append(vm.xsref)
 
-    # Purge lost VM's 
+    # Purge lost VM's
     lost = XenVM.objects.filter(xenserver=xenserver).exclude(xsref__in=vmrefs).delete()
 
     # Update vm metrics
@@ -380,11 +380,11 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
     }
 
     boot_params = template.bootopts % {
-        'ip': ip, 
-        'subnet': subnet, 
-        'gateway': gateway, 
-        'name': name, 
-        'domain': domain, 
+        'ip': ip,
+        'subnet': subnet,
+        'gateway': gateway,
+        'name': name,
+        'domain': domain,
         'url': preseed_url
     }
 
@@ -519,11 +519,10 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
         'qos_algorithm_params': {},
         'allowed_operations': ['attach'],
     }
-    # Connect the disk VDI 
+    # Connect the disk VDI
     vbdref=session.xenapi.VBD.create(vbdconnect)
 
     # Boot the VM up
     session.xenapi.VM.start(VM_ref, False, False)
 
     session.xenapi.session.logout()
-
