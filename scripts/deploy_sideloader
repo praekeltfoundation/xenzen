@@ -2,4 +2,4 @@
 
 cp -a xenzen ./build/
 
-${PIP} install -r xenzen/requirements.txt
+${PIP} install -e xenzen
