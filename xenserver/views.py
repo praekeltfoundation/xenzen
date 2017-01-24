@@ -1,24 +1,20 @@
-import hashlib
-import uuid
-import time
-import random
-import urlparse
 import json
+import urlparse
+import uuid
 from operator import itemgetter
 
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, HttpResponseRedirect
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
+from django.db.models import Sum, Max
 from django.forms import CheckboxSelectMultiple, ValidationError
-from django.conf import settings
-from django.db.models import Sum, Max, Min
-from django.db import transaction
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import render, redirect
 
-from xenserver.models import *
 from xenserver import forms, tasks, iputil
-
-from celery.task.control import revoke
+from xenserver.models import (
+    Addresses, AddressPool, AuditLog, Project, Template, XenMetrics, XenServer,
+    XenVM, Zone)
 
 
 def getIp(pool):
@@ -53,7 +49,7 @@ def getIp(pool):
     return iputil.iptos(next_ip)
 
 def log_action(user, severity, message):
-    log = AuditLog.objects.create(username=user, severity=severity, 
+    log = AuditLog.objects.create(username=user, severity=severity,
         message=message)
     log.save()
 
@@ -126,7 +122,7 @@ def server_index(request):
         stacks.append({
             'id': server.id,
             'hostname': server.hostname,
-            'vms': vms, 
+            'vms': vms,
             'mem_util': mem_util,
             'mem_total': mem_total,
             'mem_used': mem_used,
@@ -141,7 +137,7 @@ def server_index(request):
                 slack[t] += count
 
     return render(request, "servers/index.html", {
-        'servers': stacks, 
+        'servers': stacks,
         'template_slack': slack.items(),
         'global': {
             'cores': global_cores,
@@ -288,7 +284,7 @@ def template_edit(request, id):
     else:
         form = forms.TemplateForm(instance=template)
     d = {
-        'form': form, 
+        'form': form,
         'template': template
     }
 
@@ -307,7 +303,7 @@ def pool_create(request, zone):
             pool = form.save(commit=False)
             pool.zone = zoneobj
             pool.save()
-            
+
             log_action(request.user, 2, "Created pool %s" % pool.subnet)
             return redirect('zone_view', id=zone)
     else:
@@ -340,7 +336,7 @@ def pool_edit(request, id):
         form.fields['server'].queryset = XenServer.objects.filter(zone=pool.zone)
 
     return render(request, 'zones/pool_edit.html', {
-        'form': form, 
+        'form': form,
         'pool': pool
     })
 
@@ -384,7 +380,7 @@ def zone_edit(request, id):
         form = forms.ZoneForm(instance=zone)
 
     return render(request, 'zones/create_edit.html', {
-        'form': form, 
+        'form': form,
         'zone': zone
     })
 
@@ -434,8 +430,8 @@ def server_view(request, id):
     used_addresses = [vm.ip for vm in vms if vm.ip]
 
     return render(request, 'servers/view.html', {
-        'server': server, 
-        'vms': vms, 
+        'server': server,
+        'vms': vms,
     })
 
 @login_required
@@ -478,7 +474,7 @@ def server_edit(request, id):
     else:
         form = forms.XenServerForm(instance=server)
     d = {
-        'form': form, 
+        'form': form,
         'server': server
     }
 
@@ -597,7 +593,7 @@ def provision(request):
 
                     if (n_mem > group.max_memory) or (n_cores > group.max_cores):
                         return HttpResponseRedirect('/?error=tmpl1')
-                        
+
             else:
                 if not request.user.is_superuser:
                     raise ValidationError("Invalid group")
@@ -619,7 +615,7 @@ def provision(request):
                     xvms = XenVM.objects.filter(xenserver=s).exclude(status='Running')
                     for vm in xvms:
                         mem_free -= vm.memory
-                    
+
                     if mem_free > template.memory:
                         slot = int(mem_free/1024.0)
 
@@ -648,7 +644,7 @@ def provision(request):
                 server_pools = server.addresspool_set.all()
                 for p in server_pools:
                     pools.append(p)
-                
+
                 zone_pools = server.zone.addresspool_set.all()
                 for p in zone_pools:
                     if p not in pools:
