@@ -61,10 +61,10 @@ def getHostMetrics(session, hostname):
                     cpu_all.append(float(v.text))
 
                 if rt == 'vm':
-                    if not oid in dhash:
+                    if oid not in dhash:
                         dhash[oid] = {}
 
-                    if not key in dhash[oid]:
+                    if key not in dhash[oid]:
                         dhash[oid][key] = []
 
                     if v.text == 'NaN':
@@ -252,7 +252,7 @@ def updateServer(xenserver):
     xenserver.save()
 
     # List all the VM objects
-    #allvms = session.xenapi.host.get_resident_VMs(host)
+    # allvms = session.xenapi.host.get_resident_VMs(host)
     allvms = session.xenapi.VM.get_all_records()
     vmrefs = allvms.keys()
 
