@@ -1,5 +1,4 @@
 -r requirements.txt
-django-nose
 flake8
 pytest >= 3.0.0
 pytest-django

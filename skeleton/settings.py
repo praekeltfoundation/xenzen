@@ -141,7 +141,6 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
     'gunicorn',
-    'django_nose',
     'raven.contrib.django.raven_compat',
     'djcelery',
     'djcelery_email',
@@ -206,15 +205,6 @@ EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# South configuration variables
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-SKIP_SOUTH_TESTS = True     # Do not run the south tests as part of our
-                            # test suite.
-SOUTH_TESTS_MIGRATE = False  # Do not run the migrations for our tests.
-                             # We are assuming that our models.py are correct
-                             # for the tests and as such nothing needs to be
-                             # migrated.
-
 AUTHENTICATION_BACKENDS = (
     'social_auth.backends.google.GoogleOAuth2Backend',
     'django.contrib.auth.backends.ModelBackend',
@@ -238,4 +228,3 @@ try:
     from local_settings import *
 except ImportError:
     pass
-
