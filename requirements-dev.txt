@@ -1,4 +1,4 @@
--r requirements.txt
+-e .
 coverage
 flake8
 pytest >= 3.0.0
