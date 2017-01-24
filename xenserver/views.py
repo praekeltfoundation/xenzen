@@ -57,7 +57,8 @@ def log_action(user, severity, message):
 def index(request):
 
     if not request.user.is_superuser:
-        projects = Project.objects.filter(administrators=request.user).order_by('name')
+        projects = Project.objects.filter(
+            administrators=request.user).order_by('name')
         vms = None
     else:
         vms = XenVM.objects.filter(project=None).order_by('name')
@@ -158,7 +159,8 @@ def group_create(request):
         if form.is_valid():
             group = form.save(commit=False)
             group.save()
-            log_action(request.user, 3, "Created project group %s" % group.name)
+            log_action(
+                request.user, 3, "Created project group %s" % group.name)
             return redirect('home')
 
     else:
@@ -333,7 +335,8 @@ def pool_edit(request, id):
 
     else:
         form = forms.PoolForm(instance=pool)
-        form.fields['server'].queryset = XenServer.objects.filter(zone=pool.zone)
+        form.fields['server'].queryset = XenServer.objects.filter(
+            zone=pool.zone)
 
     return render(request, 'zones/pool_edit.html', {
         'form': form,
@@ -591,7 +594,8 @@ def provision(request):
                     n_cores = template.cores + group.xenvm_set.all(
                         ).aggregate(Sum('sockets'))['sockets__sum']
 
-                    if (n_mem > group.max_memory) or (n_cores > group.max_cores):
+                    if ((n_mem > group.max_memory) or
+                            (n_cores > group.max_cores)):
                         return HttpResponseRedirect('/?error=tmpl1')
 
             else:
@@ -602,9 +606,11 @@ def provision(request):
             # Server autoselect
             if not server:
                 if zone:
-                    servers = XenServer.objects.filter(zone=zone, active=True).order_by('hostname')
+                    servers = XenServer.objects.filter(
+                        zone=zone, active=True).order_by('hostname')
                 else:
-                    servers = XenServer.objects.filter(active=True).order_by('hostname')
+                    servers = XenServer.objects.filter(
+                        active=True).order_by('hostname')
 
                 slots = {}
 
@@ -612,7 +618,8 @@ def provision(request):
                     mem_total = s.memory
                     mem_free = s.mem_free - 128
 
-                    xvms = XenVM.objects.filter(xenserver=s).exclude(status='Running')
+                    xvms = XenVM.objects.filter(xenserver=s).exclude(
+                        status='Running')
                     for vm in xvms:
                         mem_free -= vm.memory
 
