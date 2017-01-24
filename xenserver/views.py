@@ -37,7 +37,7 @@ def getIp(pool):
             empty = Addresses.objects.filter(
                 vm=None, pool=pool).order_by('ip_int')[0]
             next_ip = empty.ip_int
-        except Exception, e:
+        except Exception:
             # Slowest last resort
             addresses = [i.ip_int for i in pool.addresses_set.all()]
             for ip in range(first, last):
@@ -110,7 +110,7 @@ def server_index(request):
     for server in servers:
         vms = server.xenvm_set.all().order_by('name')
 
-        used_memory = sum([vm.memory for vm in vms])
+        # used_memory = sum([vm.memory for vm in vms])
         mem_total = server.memory
         mem_free = server.mem_free
         mem_used = mem_total - mem_free
@@ -448,7 +448,7 @@ def server_view(request, id):
     server = XenServer.objects.get(id=id)
 
     vms = server.xenvm_set.all().order_by('name')
-    used_addresses = [vm.ip for vm in vms if vm.ip]
+    # used_addresses = [vm.ip for vm in vms if vm.ip]
 
     return render(request, 'servers/view.html', {
         'server': server,
@@ -640,7 +640,6 @@ def provision(request):
                 slots = {}
 
                 for s in servers:
-                    mem_total = s.memory
                     mem_free = s.mem_free - 128
 
                     xvms = XenVM.objects.filter(xenserver=s).exclude(
@@ -711,7 +710,7 @@ def provision(request):
                 request.build_absolute_uri(),
                 reverse('get_preseed', kwargs={'id': vmobj.id}))
 
-            addr = tasks.updateAddress(server, vmobj, ip, pool=pool)
+            tasks.updateAddress(server, vmobj, ip, pool=pool)
 
             # Send provisioning to celery
             if not settings.PRETEND_MODE:
@@ -750,7 +749,6 @@ def get_preseed(request, id):
 
     pool = Addresses.objects.get(ip=vm.ip).pool
 
-    gateway = pool.gateway
     netmask = iputil.getNetmask(pool.subnet)
 
     domain = vm.name.split('.', 1)[-1]
