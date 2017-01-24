@@ -38,12 +38,12 @@ def getHostMetrics(session, hostname):
     items = {}
     keys = []
 
-    for i,l in enumerate(legend):
+    for i, l in enumerate(legend):
         key = l.text
         items[key] = []
         keys.append(key)
 
-    cpu_all=[]
+    cpu_all = []
     dhash = {}
     ts = []
 
@@ -52,15 +52,15 @@ def getHostMetrics(session, hostname):
         ts.append(int(t))
 
         values = r.xpath('v')
-        for k,v in zip(keys, values):
+        for k, v in zip(keys, values):
             cf, rt, oid, key = k.split(':')
-            if cf =='AVERAGE':
-                if rt=='host' and key!='cpu_avg' and key.startswith('cpu'):
+            if cf == 'AVERAGE':
+                if rt == 'host' and key != 'cpu_avg' and key.startswith('cpu'):
                     if v.text == 'NaN':
                         continue
                     cpu_all.append(float(v.text))
 
-                if rt=='vm':
+                if rt == 'vm':
                     if not oid in dhash:
                         dhash[oid] = {}
 
@@ -151,7 +151,7 @@ def updateAddress(server, vm, ip, pool=None):
     if not pool:
         for p in AddressPool.objects.filter(zone=server.zone):
             ipnl, first, last, cidr = iputil.ipcalc(p.subnet)
-            if (ip_int>=first) and (ip_int<=last):
+            if (ip_int >= first) and (ip_int <= last):
                 pool = p
 
     if pool:
@@ -446,7 +446,7 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
 
     # Create virtual machine
     try:
-        VM_ref=session.xenapi.VM.create(vmprop)
+        VM_ref = session.xenapi.VM.create(vmprop)
     except Exception, e:
         vm.delete()
         raise e
@@ -456,15 +456,16 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
     vm.xsref = VM_ref
     vm.save()
 
-    vif = { 'device': '0',
-            'network': network,
-            'VM': VM_ref,
-            'MAC': '',
-            'MTU': '1500',
-            'qos_algorithm_type': '',
-            'qos_algorithm_params': {},
-            'other_config': {}
-        }
+    vif = {
+        'device': '0',
+        'network': network,
+        'VM': VM_ref,
+        'MAC': '',
+        'MTU': '1500',
+        'qos_algorithm_type': '',
+        'qos_algorithm_params': {},
+        'other_config': {}
+    }
 
     # Create and attach network interface
     session.xenapi.VIF.create(vif)
@@ -495,7 +496,7 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
     }
 
     # Create the VDI for our disk
-    vdi_ref=session.xenapi.VDI.create(vdisk)
+    vdi_ref = session.xenapi.VDI.create(vdisk)
 
     visoconnect = {
         'VDI': ubuntu_vdi,
@@ -513,7 +514,7 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
         'qos_algorithm_params': {}
     }
     # Connect the ISO device
-    vbdref1=session.xenapi.VBD.create(visoconnect)
+    vbdref1 = session.xenapi.VBD.create(visoconnect)
 
     vbdconnect = {
         'VDI': vdi_ref,
@@ -532,7 +533,7 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
         'allowed_operations': ['attach'],
     }
     # Connect the disk VDI
-    vbdref=session.xenapi.VBD.create(vbdconnect)
+    vbdref = session.xenapi.VBD.create(vbdconnect)
 
     # Boot the VM up
     session.xenapi.VM.start(VM_ref, False, False)
