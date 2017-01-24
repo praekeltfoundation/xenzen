@@ -12,6 +12,14 @@ from xenserver.models import (
     Addresses, AddressPool, XenMetrics, XenServer, XenVM)
 
 
+class StorageError(Exception):
+    pass
+
+
+class NetworkError(Exception):
+    pass
+
+
 def getSession(hostname, username, password):
     url = 'https://%s:443/' % (hostname)
     # First acquire a valid session by logging in:
