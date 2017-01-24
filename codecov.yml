@@ -1,0 +1,3 @@
+coverage:
+  # We don't have great coverage yet... allow down to 50%
+  range: "50...100"
