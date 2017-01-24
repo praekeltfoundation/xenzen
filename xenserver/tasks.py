@@ -267,7 +267,7 @@ def updateServer(xenserver):
         vmrefs.append(vm.xsref)
 
     # Purge lost VM's
-    lost = XenVM.objects.filter(
+    XenVM.objects.filter(
         xenserver=xenserver).exclude(xsref__in=vmrefs).delete()
 
     # Update vm metrics
@@ -514,7 +514,7 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
         'qos_algorithm_params': {}
     }
     # Connect the ISO device
-    vbdref1 = session.xenapi.VBD.create(visoconnect)
+    session.xenapi.VBD.create(visoconnect)
 
     vbdconnect = {
         'VDI': vdi_ref,
@@ -533,7 +533,7 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
         'allowed_operations': ['attach'],
     }
     # Connect the disk VDI
-    vbdref = session.xenapi.VBD.create(vbdconnect)
+    session.xenapi.VBD.create(vbdconnect)
 
     # Boot the VM up
     session.xenapi.VM.start(VM_ref, False, False)
