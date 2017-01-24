@@ -11,6 +11,7 @@ from xenserver import iputil
 from xenserver.models import (
     Addresses, AddressPool, XenMetrics, XenServer, XenVM)
 
+
 def getSession(hostname, username, password):
     url = 'https://%s:443/' % (hostname)
     # First acquire a valid session by logging in:
@@ -18,6 +19,7 @@ def getSession(hostname, username, password):
     session.xenapi.login_with_password(username, password)
 
     return session
+
 
 def getHostMetrics(session, hostname):
     t = time.time()-86400
@@ -73,6 +75,7 @@ def getHostMetrics(session, hostname):
     cpu_host = int((sum(cpu_all)/len(cpu_all))*100)
     return cpu_host, ts, dhash
 
+
 @task(time_limit=60)
 def shutdown_vm(vm):
     xenserver = vm.xenserver
@@ -84,6 +87,7 @@ def shutdown_vm(vm):
 
     session.xenapi.VM.shutdown(vm.xsref)
     session.xenapi.session.logout()
+
 
 @task(time_limit=60)
 def reboot_vm(vm):
@@ -97,6 +101,7 @@ def reboot_vm(vm):
     session.xenapi.VM.hard_reboot(vm.xsref)
     session.xenapi.session.logout()
 
+
 @task(time_limit=60)
 def start_vm(vm):
     xenserver = vm.xenserver
@@ -108,6 +113,7 @@ def start_vm(vm):
 
     session.xenapi.VM.start(vm.xsref, False, True)
     session.xenapi.session.logout()
+
 
 @task(time_limit=120)
 def destroy_vm(vm):
@@ -138,6 +144,7 @@ def destroy_vm(vm):
 
     vm.delete()
 
+
 def updateAddress(server, vm, ip, pool=None):
     ip_int = iputil.stoip(ip)
 
@@ -161,6 +168,7 @@ def updateAddress(server, vm, ip, pool=None):
             )
 
         addr.save()
+
 
 @task(time_limit=60)
 def updateVm(xenserver, vmref, vmobj):
@@ -283,11 +291,13 @@ def updateServer(xenserver):
                 )
             metric.save()
 
+
 @task(time_limit=60)
 def updateVms():
     servers = XenServer.objects.all()
     for xenserver in servers:
         updateServer.delay(xenserver)
+
 
 @task(time_limit=120)
 def complete_vm(vm):
@@ -305,6 +315,7 @@ def complete_vm(vm):
         vbrec = session.xenapi.VBD.get_record(vbd)
         if vbrec['type'] == 'CD' and not vbrec['empty']:
             session.xenapi.VBD.eject(vbd)
+
 
 @task(time_limit=120)
 def create_vm(vm, xenserver, template, name, domain, ip, subnet, gateway,
