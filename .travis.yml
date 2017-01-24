@@ -2,12 +2,11 @@ language: python
 python: 2.7
 
 cache:
-  directories:
-    - $HOME/.cache/pip
+  - pip
 
-install:
+before_install:
   - pip install --upgrade pip
-  - pip install -r requirements.pip
-  - pip install --upgrade pytest pytest-django
+install:
+  - pip install -r requirements-dev.txt
 script:
   - py.test --ds=skeleton.settings xenserver/

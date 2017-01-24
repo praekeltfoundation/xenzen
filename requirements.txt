@@ -1,0 +1,14 @@
+celery < 4
+Django >= 1.8, < 1.9
+django-celery
+django-celery-email
+django-crispy-forms
+django-haystack
+django-social-auth == 0.7.28
+gunicorn
+lxml
+psycopg2
+python-memcached
+pyyaml
+raven
+redis

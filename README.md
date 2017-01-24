@@ -1,18 +1,16 @@
 XenZen
 ========
 
-A Django UI for managing XenServer in the simplest possible way. 
+A Django UI for managing XenServer in the simplest possible way.
 
 Installing
 ----------
 
-::
-
-    $ git clone https://github.com/calston/xenzen.git
+    $ git clone https://github.com/praekeltfoundation/xenzen.git
     $ cd xenzen/
     $ virtualenv ve
     $ . ./ve/bin/activate
-    $ pip install -r requirements.pip
+    $ pip install -r requirements-dev.txt
 
 Create skeleton/local_settings.py ::
 
@@ -27,5 +25,5 @@ Create skeleton/local_settings.py ::
         }
     }
 
-    
+
 Add files in config to the right place, and make sure the paths are correct, and configure a non-root user. run manage.py syncdb, manage.py migrate and manage.py collectstatic
