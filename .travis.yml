@@ -10,3 +10,4 @@ install:
   - pip install -r requirements-dev.txt
 script:
   - py.test --ds=skeleton.settings xenserver/
+  - flake8 .
