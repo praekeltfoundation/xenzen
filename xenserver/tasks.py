@@ -79,8 +79,8 @@ def getHostMetrics(session, hostname):
 @task(time_limit=60)
 def shutdown_vm(vm):
     xenserver = vm.xenserver
-    session = getSession(xenserver.hostname,
-        xenserver.username, xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
     logger = shutdown_vm.get_logger()
     logger.info("Stopping %s on %s" % (vm.name, xenserver.hostname))
@@ -92,8 +92,8 @@ def shutdown_vm(vm):
 @task(time_limit=60)
 def reboot_vm(vm):
     xenserver = vm.xenserver
-    session = getSession(xenserver.hostname,
-        xenserver.username, xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
     logger = reboot_vm.get_logger()
     logger.info("Rebooting %s on %s" % (vm.name, xenserver.hostname))
@@ -105,8 +105,8 @@ def reboot_vm(vm):
 @task(time_limit=60)
 def start_vm(vm):
     xenserver = vm.xenserver
-    session = getSession(xenserver.hostname,
-        xenserver.username, xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
     logger = start_vm.get_logger()
     logger.info("Starting %s on %s" % (vm.name, xenserver.hostname))
@@ -118,8 +118,8 @@ def start_vm(vm):
 @task(time_limit=120)
 def destroy_vm(vm):
     xenserver = vm.xenserver
-    session = getSession(xenserver.hostname,
-        xenserver.username, xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
     logger = destroy_vm.get_logger()
     logger.info("Terminating %s on %s" % (vm.name, xenserver.hostname))
@@ -174,8 +174,8 @@ def updateAddress(server, vm, ip, pool=None):
 def updateVm(xenserver, vmref, vmobj):
     if (not vmobj['is_a_template']) and (not vmobj['is_control_domain']):
         try:
-            session = getSession(xenserver.hostname,
-                xenserver.username, xenserver.password)
+            session = getSession(
+                xenserver.hostname, xenserver.username, xenserver.password)
             netip = session.xenapi.VM_guest_metrics.get_record(
                         vmobj['guest_metrics']
                     )['networks']['0/ip']
@@ -222,8 +222,8 @@ def updateVm(xenserver, vmref, vmobj):
 
 @task(time_limit=60)
 def updateServer(xenserver):
-    session = getSession(xenserver.hostname,
-        xenserver.username, xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
     # get server info
     host = session.xenapi.host.get_all()[0]
@@ -267,7 +267,8 @@ def updateServer(xenserver):
         vmrefs.append(vm.xsref)
 
     # Purge lost VM's
-    lost = XenVM.objects.filter(xenserver=xenserver).exclude(xsref__in=vmrefs).delete()
+    lost = XenVM.objects.filter(
+        xenserver=xenserver).exclude(xsref__in=vmrefs).delete()
 
     # Update vm metrics
     for vm, stats in vmstats.items():
@@ -304,8 +305,8 @@ def complete_vm(vm):
     # Hook task for post provisioning cleanup
     xenserver = vm.xenserver
 
-    session = getSession(xenserver.hostname, xenserver.username,
-        xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
     rec = session.xenapi.VM.get_record(vm.xsref)
 
