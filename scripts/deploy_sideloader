@@ -1,5 +1,0 @@
-#!/bin/bash
-
-cp -a xenzen ./build/
-
-${PIP} install -r xenzen/requirements.txt
