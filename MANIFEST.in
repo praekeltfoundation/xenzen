@@ -1,0 +1,4 @@
+include README.md LICENSE manage.py requirements-dev.txt
+
+recursive-include xenserver/templates *
+recursive-include xenserver/static *

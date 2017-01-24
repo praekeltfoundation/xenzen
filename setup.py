@@ -33,6 +33,7 @@ setup(
         'Programming Language :: Python :: 2.7',
     ],
     packages=find_packages(),
+    include_package_data=True,
     install_requires=[
         'celery < 4',
         'Django >= 1.8, < 1.9',
