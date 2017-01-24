@@ -1,3 +1,6 @@
 coverage:
-  # We don't have great coverage yet... allow down to 50%
-  range: "50...100"
+  status:
+    project:
+      default:
+        # We don't have great coverage yet... allow down to 50%
+        target: 50%
