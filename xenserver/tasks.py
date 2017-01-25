@@ -1,15 +1,24 @@
-import xenapi
+import json
 import time
 import urllib2
-import json
-
-from lxml import etree
 from uuid import uuid4
 
 from celery import task
+from lxml import etree
 
-from xenserver.models import XenServer, XenVM, XenMetrics, AddressPool, Addresses
+import xenapi
 from xenserver import iputil
+from xenserver.models import (
+    Addresses, AddressPool, XenMetrics, XenServer, XenVM)
+
+
+class StorageError(Exception):
+    pass
+
+
+class NetworkError(Exception):
+    pass
+
 
 def getSession(hostname, username, password):
     url = 'https://%s:443/' % (hostname)
@@ -18,6 +27,7 @@ def getSession(hostname, username, password):
     session.xenapi.login_with_password(username, password)
 
     return session
+
 
 def getHostMetrics(session, hostname):
     t = time.time()-86400
@@ -36,12 +46,12 @@ def getHostMetrics(session, hostname):
     items = {}
     keys = []
 
-    for i,l in enumerate(legend):
+    for i, l in enumerate(legend):
         key = l.text
         items[key] = []
         keys.append(key)
 
-    cpu_all=[]
+    cpu_all = []
     dhash = {}
     ts = []
 
@@ -50,19 +60,19 @@ def getHostMetrics(session, hostname):
         ts.append(int(t))
 
         values = r.xpath('v')
-        for k,v in zip(keys, values):
+        for k, v in zip(keys, values):
             cf, rt, oid, key = k.split(':')
-            if cf =='AVERAGE':
-                if rt=='host' and key!='cpu_avg' and key.startswith('cpu'):
+            if cf == 'AVERAGE':
+                if rt == 'host' and key != 'cpu_avg' and key.startswith('cpu'):
                     if v.text == 'NaN':
                         continue
                     cpu_all.append(float(v.text))
 
-                if rt=='vm':
-                    if not oid in dhash:
+                if rt == 'vm':
+                    if oid not in dhash:
                         dhash[oid] = {}
 
-                    if not key in dhash[oid]:
+                    if key not in dhash[oid]:
                         dhash[oid][key] = []
 
                     if v.text == 'NaN':
@@ -73,11 +83,12 @@ def getHostMetrics(session, hostname):
     cpu_host = int((sum(cpu_all)/len(cpu_all))*100)
     return cpu_host, ts, dhash
 
+
 @task(time_limit=60)
 def shutdown_vm(vm):
     xenserver = vm.xenserver
-    session = getSession(xenserver.hostname,
-        xenserver.username, xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
     logger = shutdown_vm.get_logger()
     logger.info("Stopping %s on %s" % (vm.name, xenserver.hostname))
@@ -85,11 +96,12 @@ def shutdown_vm(vm):
     session.xenapi.VM.shutdown(vm.xsref)
     session.xenapi.session.logout()
 
+
 @task(time_limit=60)
 def reboot_vm(vm):
     xenserver = vm.xenserver
-    session = getSession(xenserver.hostname,
-        xenserver.username, xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
     logger = reboot_vm.get_logger()
     logger.info("Rebooting %s on %s" % (vm.name, xenserver.hostname))
@@ -97,11 +109,12 @@ def reboot_vm(vm):
     session.xenapi.VM.hard_reboot(vm.xsref)
     session.xenapi.session.logout()
 
+
 @task(time_limit=60)
 def start_vm(vm):
     xenserver = vm.xenserver
-    session = getSession(xenserver.hostname,
-        xenserver.username, xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
     logger = start_vm.get_logger()
     logger.info("Starting %s on %s" % (vm.name, xenserver.hostname))
@@ -109,11 +122,12 @@ def start_vm(vm):
     session.xenapi.VM.start(vm.xsref, False, True)
     session.xenapi.session.logout()
 
+
 @task(time_limit=120)
 def destroy_vm(vm):
     xenserver = vm.xenserver
-    session = getSession(xenserver.hostname,
-        xenserver.username, xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
     logger = destroy_vm.get_logger()
     logger.info("Terminating %s on %s" % (vm.name, xenserver.hostname))
@@ -138,13 +152,14 @@ def destroy_vm(vm):
 
     vm.delete()
 
+
 def updateAddress(server, vm, ip, pool=None):
     ip_int = iputil.stoip(ip)
 
     if not pool:
         for p in AddressPool.objects.filter(zone=server.zone):
             ipnl, first, last, cidr = iputil.ipcalc(p.subnet)
-            if (ip_int>=first) and (ip_int<=last):
+            if (ip_int >= first) and (ip_int <= last):
                 pool = p
 
     if pool:
@@ -162,12 +177,13 @@ def updateAddress(server, vm, ip, pool=None):
 
         addr.save()
 
+
 @task(time_limit=60)
 def updateVm(xenserver, vmref, vmobj):
     if (not vmobj['is_a_template']) and (not vmobj['is_control_domain']):
         try:
-            session = getSession(xenserver.hostname,
-                xenserver.username, xenserver.password)
+            session = getSession(
+                xenserver.hostname, xenserver.username, xenserver.password)
             netip = session.xenapi.VM_guest_metrics.get_record(
                         vmobj['guest_metrics']
                     )['networks']['0/ip']
@@ -214,10 +230,10 @@ def updateVm(xenserver, vmref, vmobj):
 
 @task(time_limit=60)
 def updateServer(xenserver):
-    session = getSession(xenserver.hostname,
-        xenserver.username, xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
-    # get server info 
+    # get server info
     host = session.xenapi.host.get_all()[0]
     host_info = session.xenapi.host.get_record(host)
     cores = int(host_info['cpu_info']['cpu_count'])
@@ -244,7 +260,7 @@ def updateServer(xenserver):
     xenserver.save()
 
     # List all the VM objects
-    #allvms = session.xenapi.host.get_resident_VMs(host)
+    # allvms = session.xenapi.host.get_resident_VMs(host)
     allvms = session.xenapi.VM.get_all_records()
     vmrefs = allvms.keys()
 
@@ -258,8 +274,9 @@ def updateServer(xenserver):
     for vm in XenVM.objects.filter(xsref__startswith='TEMPREF'):
         vmrefs.append(vm.xsref)
 
-    # Purge lost VM's 
-    lost = XenVM.objects.filter(xenserver=xenserver).exclude(xsref__in=vmrefs).delete()
+    # Purge lost VM's
+    XenVM.objects.filter(
+        xenserver=xenserver).exclude(xsref__in=vmrefs).delete()
 
     # Update vm metrics
     for vm, stats in vmstats.items():
@@ -283,19 +300,21 @@ def updateServer(xenserver):
                 )
             metric.save()
 
+
 @task(time_limit=60)
 def updateVms():
     servers = XenServer.objects.all()
     for xenserver in servers:
         updateServer.delay(xenserver)
 
+
 @task(time_limit=120)
 def complete_vm(vm):
     # Hook task for post provisioning cleanup
     xenserver = vm.xenserver
 
-    session = getSession(xenserver.hostname, xenserver.username,
-        xenserver.password)
+    session = getSession(
+        xenserver.hostname, xenserver.username, xenserver.password)
 
     rec = session.xenapi.VM.get_record(vm.xsref)
 
@@ -305,6 +324,7 @@ def complete_vm(vm):
         vbrec = session.xenapi.VBD.get_record(vbd)
         if vbrec['type'] == 'CD' and not vbrec['empty']:
             session.xenapi.VBD.eject(vbd)
+
 
 @task(time_limit=120)
 def create_vm(vm, xenserver, template, name, domain, ip, subnet, gateway,
@@ -380,11 +400,11 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
     }
 
     boot_params = template.bootopts % {
-        'ip': ip, 
-        'subnet': subnet, 
-        'gateway': gateway, 
-        'name': name, 
-        'domain': domain, 
+        'ip': ip,
+        'subnet': subnet,
+        'gateway': gateway,
+        'name': name,
+        'domain': domain,
         'url': preseed_url
     }
 
@@ -434,7 +454,7 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
 
     # Create virtual machine
     try:
-        VM_ref=session.xenapi.VM.create(vmprop)
+        VM_ref = session.xenapi.VM.create(vmprop)
     except Exception, e:
         vm.delete()
         raise e
@@ -444,15 +464,16 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
     vm.xsref = VM_ref
     vm.save()
 
-    vif = { 'device': '0',
-            'network': network,
-            'VM': VM_ref,
-            'MAC': '',
-            'MTU': '1500',
-            'qos_algorithm_type': '',
-            'qos_algorithm_params': {},
-            'other_config': {}
-        }
+    vif = {
+        'device': '0',
+        'network': network,
+        'VM': VM_ref,
+        'MAC': '',
+        'MTU': '1500',
+        'qos_algorithm_type': '',
+        'qos_algorithm_params': {},
+        'other_config': {}
+    }
 
     # Create and attach network interface
     session.xenapi.VIF.create(vif)
@@ -483,7 +504,7 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
     }
 
     # Create the VDI for our disk
-    vdi_ref=session.xenapi.VDI.create(vdisk)
+    vdi_ref = session.xenapi.VDI.create(vdisk)
 
     visoconnect = {
         'VDI': ubuntu_vdi,
@@ -501,7 +522,7 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
         'qos_algorithm_params': {}
     }
     # Connect the ISO device
-    vbdref1=session.xenapi.VBD.create(visoconnect)
+    session.xenapi.VBD.create(visoconnect)
 
     vbdconnect = {
         'VDI': vdi_ref,
@@ -519,11 +540,10 @@ def _create_vm(session, vm, template, name, domain, ip, subnet, gateway,
         'qos_algorithm_params': {},
         'allowed_operations': ['attach'],
     }
-    # Connect the disk VDI 
-    vbdref=session.xenapi.VBD.create(vbdconnect)
+    # Connect the disk VDI
+    session.xenapi.VBD.create(vbdconnect)
 
     # Boot the VM up
     session.xenapi.VM.start(VM_ref, False, False)
 
     session.xenapi.session.logout()
-
