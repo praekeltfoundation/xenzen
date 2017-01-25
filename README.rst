@@ -1,10 +1,11 @@
 XenZen
-========
+======
 
 A Django UI for managing XenServer in the simplest possible way.
 
 Installing
 ----------
+::
 
     $ git clone https://github.com/praekeltfoundation/xenzen.git
     $ cd xenzen/

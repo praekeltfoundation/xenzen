@@ -19,7 +19,7 @@ setup(
     url='https://github.com/praekeltfoundation/xenzen',
     description=(
         'A Django UI for managing XenServer in the simplest possible way.'),
-    long_description=read('README.md'),
+    long_description=read('README.rst'),
     author='Colin Alston',
     maintainer='Praekelt.org SRE team',
     maintainer_email='sre@praekelt.org',
