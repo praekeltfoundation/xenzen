@@ -8,17 +8,24 @@ XenZen
 
 A Django UI for managing `XenServer <http://xenserver.org/>`_ in the simplest possible way.
 
-Installing
-----------
-::
+Getting started
+---------------
+To install XenZen run: ::
 
     $ git clone https://github.com/praekeltfoundation/xenzen.git
     $ cd xenzen/
     $ virtualenv ve
     $ . ./ve/bin/activate
-    $ pip install -r requirements-dev.txt
+    $ pip install -e .
 
-Create skeleton/local_settings.py ::
+To start a development server listening on ``127.0.0.1:8000``, with a SQLite database, run: ::
+
+    $ export DJANGO_SETTINGS_MODULE=skeleton.settings
+    $ django-admin syncdb
+    $ django-admin collectstatic
+    $ django-admin runserver
+
+To configure XenZen further, create the file ``skeleton/local_settings.py`` containing extra Django settings. For example, to configure a PostgreSQL database: ::
 
     DATABASES = {
         'default': {
@@ -30,6 +37,3 @@ Create skeleton/local_settings.py ::
             'PORT': '',
         }
     }
-
-
-Add files in config to the right place, and make sure the paths are correct, and configure a non-root user. run manage.py syncdb, manage.py migrate and manage.py collectstatic
