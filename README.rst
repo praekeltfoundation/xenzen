@@ -2,9 +2,9 @@ XenZen
 ======
 
 .. image:: https://travis-ci.org/praekeltfoundation/xenzen.svg?branch=develop
-  :target: https://travis-ci.org/praekeltfoundation/xenzen
+    :target: https://travis-ci.org/praekeltfoundation/xenzen
 .. image:: https://codecov.io/gh/praekeltfoundation/xenzen/branch/develop/graph/badge.svg
-  :target: https://codecov.io/gh/praekeltfoundation/xenzen
+    :target: https://codecov.io/gh/praekeltfoundation/xenzen
 
 A Django UI for managing `XenServer <http://xenserver.org/>`_ in the simplest possible way.
 
