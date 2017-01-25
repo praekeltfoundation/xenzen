@@ -6,7 +6,7 @@ XenZen
 .. image:: https://codecov.io/gh/praekeltfoundation/xenzen/branch/develop/graph/badge.svg
   :target: https://codecov.io/gh/praekeltfoundation/xenzen
 
-A Django UI for managing XenServer in the simplest possible way.
+A Django UI for managing `XenServer <http://xenserver.org/>`_ in the simplest possible way.
 
 Installing
 ----------
