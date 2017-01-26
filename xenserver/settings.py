@@ -1,7 +1,6 @@
-# Django settings for skeleton project.
-
-import os
 import datetime
+import os
+
 import djcelery
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
