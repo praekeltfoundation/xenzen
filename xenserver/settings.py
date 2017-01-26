@@ -12,7 +12,16 @@ def abspath(*args):
     return os.path.join(BASE_DIR, *args)
 
 
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = '02qbonw5tuu$m(c^s9h5u+ravid-i+@kn(^5^aw!@o^nl*+!9c'
+
+# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+
+ALLOWED_HOSTS = []
 
 DATABASES = {
     'default': {
@@ -20,10 +29,6 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
-
-# Hosts/domain names that are valid for this site; required if DEBUG is False
-# See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ['*']
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
