@@ -4,12 +4,12 @@ import os
 import datetime
 import djcelery
 
-PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def abspath(*args):
-    """convert relative paths to absolute paths relative to PROJECT_ROOT"""
-    return os.path.join(PROJECT_ROOT, *args)
+    """convert relative paths to absolute paths relative to BASE_DIR"""
+    return os.path.join(BASE_DIR, *args)
 
 
 DEBUG = True
