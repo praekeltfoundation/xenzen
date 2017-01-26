@@ -20,12 +20,12 @@ To install XenZen run: ::
 
 To start a development server listening on ``127.0.0.1:8000``, with a SQLite database, run: ::
 
-    $ export DJANGO_SETTINGS_MODULE=skeleton.settings
+    $ export DJANGO_SETTINGS_MODULE=xenserver.settings
     $ django-admin syncdb
     $ django-admin collectstatic
     $ django-admin runserver
 
-To configure XenZen further, create the file ``skeleton/local_settings.py`` containing extra Django settings. For example, to configure a PostgreSQL database: ::
+To configure XenZen further, create the file ``local_settings.py`` containing extra Django settings. For example, to configure a PostgreSQL database: ::
 
     DATABASES = {
         'default': {
