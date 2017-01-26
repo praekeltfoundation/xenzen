@@ -4,9 +4,6 @@ import os
 import datetime
 import djcelery
 
-
-djcelery.setup_loader()
-
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -141,11 +138,6 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
-    'raven.contrib.django.raven_compat',
-    'djcelery',
-    'djcelery_email',
-    'social_auth',
-    'crispy_forms',
     'xenserver',
 )
 
@@ -178,7 +170,15 @@ LOGGING = {
     }
 }
 
+
+# Raven (Sentry)
+INSTALLED_APPS += ('raven.contrib.django.raven_compat',)
+
+
 # Celery configuration options
+djcelery.setup_loader()
+INSTALLED_APPS += ('djcelery', 'djcelery_email',)
+
 BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_IGNORE_RESULT = True
@@ -205,17 +205,21 @@ EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+
+# Authentication + Social Auth
+INSTALLED_APPS += ('social_auth',)
 AUTHENTICATION_BACKENDS = (
     'social_auth.backends.google.GoogleOAuth2Backend',
     'django.contrib.auth.backends.ModelBackend',
 )
-
-
 LOGIN_REDIRECT_URL = '/'
-
 SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/accounts/profile/'
 
+
+# Crispy Forms
+INSTALLED_APPS += ('crispy_forms',)
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
+
 
 # If set to True, no task actions are completed
 PRETEND_MODE = False
