@@ -15,10 +15,10 @@ def abspath(*args):
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '02qbonw5tuu$m(c^s9h5u+ravid-i+@kn(^5^aw!@o^nl*+!9c'
+SECRET_KEY = None
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = []
 

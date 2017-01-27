@@ -20,7 +20,7 @@ To install XenZen run: ::
 
 To start a development server listening on ``127.0.0.1:8000``, with a SQLite database, run: ::
 
-    $ export DJANGO_SETTINGS_MODULE=xenserver.settings
+    $ export DJANGO_SETTINGS_MODULE=xenserver.testsettings
     $ django-admin syncdb
     $ django-admin collectstatic
     $ django-admin runserver
