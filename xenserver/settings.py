@@ -1,8 +1,6 @@
 import datetime
 import os
 
-import djcelery
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -103,9 +101,6 @@ INSTALLED_APPS += ('raven.contrib.django.raven_compat',)
 
 
 # Celery configuration options
-djcelery.setup_loader()
-INSTALLED_APPS += ('djcelery', 'djcelery_email',)
-
 BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_IGNORE_RESULT = True
@@ -115,9 +110,7 @@ CELERY_IGNORE_RESULT = True
 # CELERY_ALWAYS_EAGER = DEBUG
 
 # Tell Celery where to find the tasks
-CELERY_IMPORTS = (
-    'xenserver.tasks',
-)
+CELERY_IMPORTS = ('xenserver.tasks',)
 
 CELERYBEAT_SCHEDULE = {
     'update-servers': {
@@ -126,9 +119,8 @@ CELERYBEAT_SCHEDULE = {
     }
 }
 
-# Defer email sending to Celery, except if we're in debug mode,
-# then just print the emails to stdout for debugging.
-EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
+
+# Print email to console if in DEBUG mode
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 

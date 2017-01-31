@@ -35,10 +35,8 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        'celery < 4',
+        'celery >= 3.1, < 4',
         'Django >= 1.8, < 1.9',
-        'django-celery',
-        'django-celery-email',
         'django-crispy-forms',
         'django-haystack',
         'django-social-auth == 0.7.28',

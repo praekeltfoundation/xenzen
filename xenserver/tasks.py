@@ -1,13 +1,15 @@
+from __future__ import absolute_import
+
 import json
 import time
 import urllib2
 from uuid import uuid4
 
-from celery import task
 from lxml import etree
 
 import xenapi
 from xenserver import iputil
+from xenserver.celery import app
 from xenserver.models import (
     Addresses, AddressPool, XenMetrics, XenServer, XenVM)
 
@@ -84,7 +86,7 @@ def getHostMetrics(session, hostname):
     return cpu_host, ts, dhash
 
 
-@task(time_limit=60)
+@app.task(time_limit=60)
 def shutdown_vm(vm):
     xenserver = vm.xenserver
     session = getSession(
@@ -97,7 +99,7 @@ def shutdown_vm(vm):
     session.xenapi.session.logout()
 
 
-@task(time_limit=60)
+@app.task(time_limit=60)
 def reboot_vm(vm):
     xenserver = vm.xenserver
     session = getSession(
@@ -110,7 +112,7 @@ def reboot_vm(vm):
     session.xenapi.session.logout()
 
 
-@task(time_limit=60)
+@app.task(time_limit=60)
 def start_vm(vm):
     xenserver = vm.xenserver
     session = getSession(
@@ -123,7 +125,7 @@ def start_vm(vm):
     session.xenapi.session.logout()
 
 
-@task(time_limit=120)
+@app.task(time_limit=120)
 def destroy_vm(vm):
     xenserver = vm.xenserver
     session = getSession(
@@ -178,7 +180,7 @@ def updateAddress(server, vm, ip, pool=None):
         addr.save()
 
 
-@task(time_limit=60)
+@app.task(time_limit=60)
 def updateVm(xenserver, vmref, vmobj):
     if (not vmobj['is_a_template']) and (not vmobj['is_control_domain']):
         try:
@@ -228,7 +230,7 @@ def updateVm(xenserver, vmref, vmobj):
                 pass
 
 
-@task(time_limit=60)
+@app.task(time_limit=60)
 def updateServer(xenserver):
     session = getSession(
         xenserver.hostname, xenserver.username, xenserver.password)
@@ -301,14 +303,14 @@ def updateServer(xenserver):
             metric.save()
 
 
-@task(time_limit=60)
+@app.task(time_limit=60)
 def updateVms():
     servers = XenServer.objects.all()
     for xenserver in servers:
         updateServer.delay(xenserver)
 
 
-@task(time_limit=120)
+@app.task(time_limit=120)
 def complete_vm(vm):
     # Hook task for post provisioning cleanup
     xenserver = vm.xenserver
@@ -326,7 +328,7 @@ def complete_vm(vm):
             session.xenapi.VBD.eject(vbd)
 
 
-@task(time_limit=120)
+@app.task(time_limit=120)
 def create_vm(vm, xenserver, template, name, domain, ip, subnet, gateway,
               preseed_url, extra_network_bridges=()):
     session = getSession(
