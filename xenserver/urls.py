@@ -57,7 +57,7 @@ urlpatterns = patterns(
     url(r'^accounts/profile/$', 'xenserver.views.accounts_profile', name='accounts_profile'),  # noqa: E501
     url(r'^logs/$', 'xenserver.views.log_index', name='logs'),
 
-    url(r'', include('social_auth.urls')),
+    url(r'', include('social_django.urls', namespace='social')),
 
     # Uncomment the next line to enable the admin:
     url(r'^admin/', include(admin.site.urls)),
