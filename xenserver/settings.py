@@ -126,9 +126,9 @@ if DEBUG:
 
 
 # Authentication + Social Auth
-INSTALLED_APPS += ('social_auth',)
+INSTALLED_APPS += ('social_django',)
 AUTHENTICATION_BACKENDS = (
-    'social_auth.backends.google.GoogleOAuth2Backend',
+    'social_core.backends.google.GoogleOAuth2',
     'django.contrib.auth.backends.ModelBackend',
 )
 LOGIN_REDIRECT_URL = '/'

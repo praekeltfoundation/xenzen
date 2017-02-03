@@ -39,11 +39,11 @@ setup(
         'Django >= 1.8, < 1.9',
         'django-crispy-forms',
         'django-haystack',
-        'django-social-auth == 0.7.28',
         'lxml',
         'psycopg2',
         'pyyaml',
         'raven',
         'redis',
+        'social-auth-app-django',
     ],
 )
