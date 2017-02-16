@@ -143,6 +143,10 @@ CRISPY_TEMPLATE_PACK = 'bootstrap3'
 # If set to True, no task actions are completed
 PRETEND_MODE = False
 
+# If set to True, SSL certificates are not verified when connecting to any
+# XenServer host
+XENZEN_XENAPI_IGNORE_SSL = False
+
 try:
     from local_settings import *  # noqa: F401, F403
 except ImportError:

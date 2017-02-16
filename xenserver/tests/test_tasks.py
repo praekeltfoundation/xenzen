@@ -13,6 +13,11 @@ from xenserver.tests.matchers import (
 
 @pytest.mark.django_db
 class TestCreateVM(object):
+    def setup_xs_pool_master(self, xenserver, xenapi_version):
+        self.master_host = xenserver.add_host(
+            xenapi_version[0], xenapi_version[1])
+        self.pool = xenserver.add_pool(self.master_host)
+
     def setup_xs_storage(self, xenserver, iso_names=("installer.iso",)):
         self.local_SR = xenserver.add_SR('Local storage', 'lvm')
         self.iso_SR = xenserver.add_SR('ISOs', 'iso')
@@ -71,11 +76,16 @@ class TestCreateVM(object):
         return ExpectedXenServerVM(
             VIFs=MatchSorted(VIFs), VBDs=MatchSorted(VBDs), **params)
 
-    def test_create_vm_simple(self):
+    xenapi_versions = pytest.mark.parametrize('xenapi_version',
+                                              [(1, 1), (1, 2)])
+
+    @xenapi_versions
+    def test_create_vm_simple(self, xenapi_version):
         """
         We can create a new VM using mostly default values.
         """
         xenserver = FakeXenServer()
+        self.setup_xs_pool_master(xenserver, xenapi_version)
         self.setup_xs_storage(xenserver)
         self.setup_xs_networks(xenserver)
         session = xenserver.getSession()
@@ -118,13 +128,15 @@ class TestCreateVM(object):
         # The VM should be started.
         assert xenserver.VM_operations == [(vm.xsref, "start")]
 
-    def test_create_vm_second_vif(self):
+    @xenapi_versions
+    def test_create_vm_second_vif(self, xenapi_version):
         """
         We can create a new VM with a second VIF.
 
         # TODO: Actually implement second network interface support.
         """
         xenserver = FakeXenServer()
+        self.setup_xs_pool_master(xenserver, xenapi_version)
         self.setup_xs_storage(xenserver)
         self.setup_xs_networks(xenserver)
         session = xenserver.getSession()
