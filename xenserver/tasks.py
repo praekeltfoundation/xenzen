@@ -5,6 +5,7 @@ import time
 import urllib2
 from uuid import uuid4
 
+from django.conf import settings
 from lxml import etree
 
 import xenapi
@@ -25,7 +26,7 @@ class NetworkError(Exception):
 def getSession(hostname, username, password):
     url = 'https://%s:443/' % (hostname)
     # First acquire a valid session by logging in:
-    session = xenapi.Session(url)
+    session = xenapi.Session(url, ignore_ssl=settings.XENZEN_XENAPI_IGNORE_SSL)
     session.xenapi.login_with_password(username, password)
 
     return session
