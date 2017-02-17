@@ -16,3 +16,12 @@ script:
 
 after_success:
   - codecov
+
+deploy:
+  provider: pypi
+  user: praekelt.org
+  password:
+    secure: YkDxJh9ONnEM7JSvCehBrcxt6BSXZ9Ja0BV1pmLEd6sx/vNf4/6nku4LjNTU/tA+J/1jetgDaik7tX6QlcJ2VSXNSYbhMifzaMxziIIz82JeDZdcc6/aa99CREE6Rzr5zVfgkyIg/XTbb+RhmvtenBgkaW+ipa8EBuRFbMFBTfo=
+  distributions: sdist bdist_wheel
+  on:
+    tags: true
