@@ -1,6 +1,8 @@
 XenZen
 ======
 
+.. image:: https://img.shields.io/pypi/v/xenzen.svg
+    :target: https://pypi.python.org/pypi/xenzen
 .. image:: https://travis-ci.org/praekeltfoundation/xenzen.svg?branch=develop
     :target: https://travis-ci.org/praekeltfoundation/xenzen
 .. image:: https://codecov.io/gh/praekeltfoundation/xenzen/branch/develop/graph/badge.svg
