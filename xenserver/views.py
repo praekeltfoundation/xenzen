@@ -1,24 +1,20 @@
-import hashlib
-import uuid
-import time
-import random
-import urlparse
 import json
+import urlparse
+import uuid
 from operator import itemgetter
 
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, HttpResponseRedirect
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
+from django.db.models import Sum, Max
 from django.forms import CheckboxSelectMultiple, ValidationError
-from django.conf import settings
-from django.db.models import Sum, Max, Min
-from django.db import transaction
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import render, redirect
 
-from xenserver.models import *
 from xenserver import forms, tasks, iputil
-
-from celery.task.control import revoke
+from xenserver.models import (
+    Addresses, AddressPool, AuditLog, Project, Template, XenMetrics, XenServer,
+    XenVM, Zone)
 
 
 def getIp(pool):
@@ -41,7 +37,7 @@ def getIp(pool):
             empty = Addresses.objects.filter(
                 vm=None, pool=pool).order_by('ip_int')[0]
             next_ip = empty.ip_int
-        except Exception, e:
+        except Exception:
             # Slowest last resort
             addresses = [i.ip_int for i in pool.addresses_set.all()]
             for ip in range(first, last):
@@ -52,16 +48,19 @@ def getIp(pool):
 
     return iputil.iptos(next_ip)
 
+
 def log_action(user, severity, message):
-    log = AuditLog.objects.create(username=user, severity=severity, 
-        message=message)
+    log = AuditLog.objects.create(
+        username=user, severity=severity, message=message)
     log.save()
+
 
 @login_required
 def index(request):
 
     if not request.user.is_superuser:
-        projects = Project.objects.filter(administrators=request.user).order_by('name')
+        projects = Project.objects.filter(
+            administrators=request.user).order_by('name')
         vms = None
     else:
         vms = XenVM.objects.filter(project=None).order_by('name')
@@ -73,6 +72,7 @@ def index(request):
         'vms': vms,
         'error': error
     })
+
 
 @login_required
 def vm_view(request, id):
@@ -86,6 +86,7 @@ def vm_view(request, id):
     return render(request, "vm/view.html", {
         'vm': vm
     })
+
 
 @login_required
 def server_index(request):
@@ -109,7 +110,7 @@ def server_index(request):
     for server in servers:
         vms = server.xenvm_set.all().order_by('name')
 
-        used_memory = sum([vm.memory for vm in vms])
+        # used_memory = sum([vm.memory for vm in vms])
         mem_total = server.memory
         mem_free = server.mem_free
         mem_used = mem_total - mem_free
@@ -126,7 +127,7 @@ def server_index(request):
         stacks.append({
             'id': server.id,
             'hostname': server.hostname,
-            'vms': vms, 
+            'vms': vms,
             'mem_util': mem_util,
             'mem_total': mem_total,
             'mem_used': mem_used,
@@ -141,7 +142,7 @@ def server_index(request):
                 slack[t] += count
 
     return render(request, "servers/index.html", {
-        'servers': stacks, 
+        'servers': stacks,
         'template_slack': slack.items(),
         'global': {
             'cores': global_cores,
@@ -151,6 +152,7 @@ def server_index(request):
             'corecontend': '%0.2f' % (global_vmcores/float(global_cores))
         }
     })
+
 
 @login_required
 def group_create(request):
@@ -162,7 +164,8 @@ def group_create(request):
         if form.is_valid():
             group = form.save(commit=False)
             group.save()
-            log_action(request.user, 3, "Created project group %s" % group.name)
+            log_action(
+                request.user, 3, "Created project group %s" % group.name)
             return redirect('home')
 
     else:
@@ -173,6 +176,7 @@ def group_create(request):
     return render(request, 'group_create.html', {
         'form': form
     })
+
 
 @login_required
 def group_edit(request, id):
@@ -198,6 +202,7 @@ def group_edit(request, id):
         'form': form
     })
 
+
 @login_required
 def group_move(request, vm, group):
     vm_obj = XenVM.objects.get(id=vm)
@@ -210,6 +215,7 @@ def group_move(request, vm, group):
     vm_obj.save()
 
     return redirect('home')
+
 
 @login_required
 def accounts_profile(request):
@@ -228,6 +234,7 @@ def accounts_profile(request):
         'form': form
     })
 
+
 @login_required
 def log_index(request):
     if not request.user.is_superuser:
@@ -238,6 +245,7 @@ def log_index(request):
         'logs': logs
     })
 
+
 @login_required
 def template_index(request):
     if not request.user.is_superuser:
@@ -247,6 +255,7 @@ def template_index(request):
     return render(request, "templates/index.html", {
         'templates': templates
     })
+
 
 @login_required
 def template_create(request):
@@ -268,6 +277,7 @@ def template_create(request):
         'form': form
     })
 
+
 @login_required
 def template_edit(request, id):
     if not request.user.is_superuser:
@@ -288,11 +298,12 @@ def template_edit(request, id):
     else:
         form = forms.TemplateForm(instance=template)
     d = {
-        'form': form, 
+        'form': form,
         'template': template
     }
 
     return render(request, 'templates/create_edit.html', d)
+
 
 @login_required
 def pool_create(request, zone):
@@ -307,7 +318,7 @@ def pool_create(request, zone):
             pool = form.save(commit=False)
             pool.zone = zoneobj
             pool.save()
-            
+
             log_action(request.user, 2, "Created pool %s" % pool.subnet)
             return redirect('zone_view', id=zone)
     else:
@@ -317,6 +328,7 @@ def pool_create(request, zone):
     return render(request, 'zones/pool_edit.html', {
         'form': form
     })
+
 
 @login_required
 def pool_edit(request, id):
@@ -337,21 +349,24 @@ def pool_edit(request, id):
 
     else:
         form = forms.PoolForm(instance=pool)
-        form.fields['server'].queryset = XenServer.objects.filter(zone=pool.zone)
+        form.fields['server'].queryset = XenServer.objects.filter(
+            zone=pool.zone)
 
     return render(request, 'zones/pool_edit.html', {
-        'form': form, 
+        'form': form,
         'pool': pool
     })
+
 
 @login_required
 def pool_delete(request, id):
     pool = AddressPool.objects.get(id=id)
-    zoneid =  pool.zone.id
+    zoneid = pool.zone.id
 
     pool.delete()
 
     return redirect('zone_view', id=zoneid)
+
 
 @login_required
 def zone_index(request):
@@ -362,6 +377,7 @@ def zone_index(request):
     return render(request, "zones/index.html", {
         'zones': zones
     })
+
 
 @login_required
 def zone_edit(request, id):
@@ -384,9 +400,10 @@ def zone_edit(request, id):
         form = forms.ZoneForm(instance=zone)
 
     return render(request, 'zones/create_edit.html', {
-        'form': form, 
+        'form': form,
         'zone': zone
     })
+
 
 @login_required
 def zone_create(request):
@@ -431,12 +448,13 @@ def server_view(request, id):
     server = XenServer.objects.get(id=id)
 
     vms = server.xenvm_set.all().order_by('name')
-    used_addresses = [vm.ip for vm in vms if vm.ip]
+    # used_addresses = [vm.ip for vm in vms if vm.ip]
 
     return render(request, 'servers/view.html', {
-        'server': server, 
-        'vms': vms, 
+        'server': server,
+        'vms': vms,
     })
+
 
 @login_required
 def server_create(request):
@@ -459,6 +477,7 @@ def server_create(request):
         'form': form
     })
 
+
 @login_required
 def server_edit(request, id):
     if not request.user.is_superuser:
@@ -478,11 +497,12 @@ def server_edit(request, id):
     else:
         form = forms.XenServerForm(instance=server)
     d = {
-        'form': form, 
+        'form': form,
         'server': server
     }
 
     return render(request, 'servers/create_edit.html', d)
+
 
 @login_required
 def start_vm(request, id):
@@ -504,6 +524,7 @@ def start_vm(request, id):
         ))
 
     return redirect('home')
+
 
 @login_required
 def stop_vm(request, id):
@@ -527,6 +548,7 @@ def stop_vm(request, id):
 
     return redirect('home')
 
+
 @login_required
 def reboot_vm(request, id):
     vm = XenVM.objects.get(id=id)
@@ -549,6 +571,7 @@ def reboot_vm(request, id):
 
     return redirect('home')
 
+
 @login_required
 def terminate_vm(request, id):
     vm = XenVM.objects.get(id=id)
@@ -570,6 +593,7 @@ def terminate_vm(request, id):
         ))
 
     return redirect('home')
+
 
 @login_required
 def provision(request):
@@ -595,9 +619,10 @@ def provision(request):
                     n_cores = template.cores + group.xenvm_set.all(
                         ).aggregate(Sum('sockets'))['sockets__sum']
 
-                    if (n_mem > group.max_memory) or (n_cores > group.max_cores):
+                    if ((n_mem > group.max_memory) or
+                            (n_cores > group.max_cores)):
                         return HttpResponseRedirect('/?error=tmpl1')
-                        
+
             else:
                 if not request.user.is_superuser:
                     raise ValidationError("Invalid group")
@@ -606,30 +631,32 @@ def provision(request):
             # Server autoselect
             if not server:
                 if zone:
-                    servers = XenServer.objects.filter(zone=zone, active=True).order_by('hostname')
+                    servers = XenServer.objects.filter(
+                        zone=zone, active=True).order_by('hostname')
                 else:
-                    servers = XenServer.objects.filter(active=True).order_by('hostname')
+                    servers = XenServer.objects.filter(
+                        active=True).order_by('hostname')
 
                 slots = {}
 
                 for s in servers:
-                    mem_total = s.memory
                     mem_free = s.mem_free - 128
 
-                    xvms = XenVM.objects.filter(xenserver=s).exclude(status='Running')
+                    xvms = XenVM.objects.filter(xenserver=s).exclude(
+                        status='Running')
                     for vm in xvms:
                         mem_free -= vm.memory
-                    
+
                     if mem_free > template.memory:
                         slot = int(mem_free/1024.0)
 
-                        if not slot in slots:
+                        if slot not in slots:
                             slots[slot] = []
 
                         slots[slot].append((s, s.cpu_util))
 
                 memory_space = sorted(slots.keys())[0]
-                cpu_space = sorted(slots[memory_space], key = itemgetter(1))[0]
+                cpu_space = sorted(slots[memory_space], key=itemgetter(1))[0]
 
                 server = cpu_space[0]
 
@@ -648,7 +675,7 @@ def provision(request):
                 server_pools = server.addresspool_set.all()
                 for p in server_pools:
                     pools.append(p)
-                
+
                 zone_pools = server.zone.addresspool_set.all()
                 for p in zone_pools:
                     if p not in pools:
@@ -665,7 +692,6 @@ def provision(request):
                 if not ip:
                     raise Exception('Oh dear, no more IP addresses')
 
-
             vmobj = XenVM.objects.create(
                 xsref='TEMPREF'+uuid.uuid1().hex,
                 name=hostname,
@@ -680,10 +706,11 @@ def provision(request):
             vmobj.save()
 
             # Get a preseed URL
-            url = urlparse.urljoin(request.build_absolute_uri(),
-                reverse('get_preseed', kwargs={'id':vmobj.id}))
+            url = urlparse.urljoin(
+                request.build_absolute_uri(),
+                reverse('get_preseed', kwargs={'id': vmobj.id}))
 
-            addr = tasks.updateAddress(server, vmobj, ip, pool=pool)
+            tasks.updateAddress(server, vmobj, ip, pool=pool)
 
             # Send provisioning to celery
             if not settings.PRETEND_MODE:
@@ -707,6 +734,7 @@ def provision(request):
         'form': form
     })
 
+
 def complete_provision(request, hostname):
     vm = XenVM.objects.get(name=hostname)
 
@@ -715,12 +743,12 @@ def complete_provision(request, hostname):
 
     return HttpResponse(json.dumps('{}'), content_type="application/json")
 
+
 def get_preseed(request, id):
     vm = XenVM.objects.get(id=id)
 
     pool = Addresses.objects.get(ip=vm.ip).pool
 
-    gateway = pool.gateway
     netmask = iputil.getNetmask(pool.subnet)
 
     domain = vm.name.split('.', 1)[-1]
@@ -741,6 +769,7 @@ def get_preseed(request, id):
 
     return HttpResponse(seed, content_type="text/plain")
 
+
 @login_required
 def get_metrics(request, id):
     vm = XenVM.objects.get(id=id)
@@ -753,6 +782,6 @@ def get_metrics(request, id):
         t = json.loads(m.timeblob)
         md = json.loads(m.datablob)
 
-        d[m.key] = [[i*1000, j] for i,j in zip(t, md)]
+        d[m.key] = [[i*1000, j] for i, j in zip(t, md)]
 
     return HttpResponse(json.dumps(d), content_type="application/json")

@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
 
 
 class Zone(models.Model):
@@ -10,6 +10,7 @@ class Zone(models.Model):
 
     def __str__(self):
         return self.__unicode().encode('utf-8', 'replace')
+
 
 class XenServer(models.Model):
     hostname = models.CharField(max_length=255, unique=True)
@@ -34,6 +35,7 @@ class XenServer(models.Model):
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
 
+
 class Project(models.Model):
     name = models.CharField(max_length=255)
 
@@ -48,12 +50,14 @@ class Project(models.Model):
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
 
+
 class AddressPool(models.Model):
     subnet = models.CharField(max_length=128, unique=True)
     gateway = models.CharField(max_length=128)
     zone = models.ForeignKey(Zone)
     server = models.ForeignKey(XenServer, null=True, blank=True)
     version = models.IntegerField()
+
 
 class Template(models.Model):
     name = models.CharField(max_length=255)
@@ -73,6 +77,7 @@ class Template(models.Model):
 
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
+
 
 class XenVM(models.Model):
     name = models.CharField(max_length=255)
@@ -97,6 +102,7 @@ class XenVM(models.Model):
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
 
+
 class Addresses(models.Model):
     ip = models.CharField(max_length=128)
     ip_int = models.BigIntegerField(db_index=True)
@@ -106,15 +112,18 @@ class Addresses(models.Model):
 
     def __unicode__(self):
         return self.ip
+
     def __str__(self):
         return self.__unicode__().encode('utf-8', 'replace')
+
 
 class XenMetrics(models.Model):
     vm = models.ForeignKey(XenVM)
     key = models.CharField(max_length=128)
     timeblob = models.TextField()
     datablob = models.TextField()
-    
+
+
 class AuditLog(models.Model):
     username = models.ForeignKey(User, null=True)
 

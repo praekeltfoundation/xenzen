@@ -1,13 +1,27 @@
 language: python
 python: 2.7
-
 cache:
-  directories:
-    - $HOME/.cache/pip
+  - pip
 
-install:
+before_install:
   - pip install --upgrade pip
-  - pip install -r requirements.pip
-  - pip install --upgrade pytest pytest-django
+install:
+  - pip install -r requirements-dev.txt
+  - pip install codecov
+
 script:
-  - py.test --ds=skeleton.settings xenserver/
+  - coverage run "$(which pytest)"
+  - coverage report -m  && coverage xml
+  - flake8 .
+
+after_success:
+  - codecov
+
+deploy:
+  provider: pypi
+  user: praekelt.org
+  password:
+    secure: YkDxJh9ONnEM7JSvCehBrcxt6BSXZ9Ja0BV1pmLEd6sx/vNf4/6nku4LjNTU/tA+J/1jetgDaik7tX6QlcJ2VSXNSYbhMifzaMxziIIz82JeDZdcc6/aa99CREE6Rzr5zVfgkyIg/XTbb+RhmvtenBgkaW+ipa8EBuRFbMFBTfo=
+  distributions: sdist bdist_wheel
+  on:
+    tags: true

@@ -42,7 +42,7 @@
 
         <input type="hidden" name="next" value="{{ next }}" />
         <br/>
-        Login with <a href="{% url 'socialauth_begin' backend='google-oauth2' %}">Google</a>
+        Login with <a href="{% url 'social:begin' 'google-oauth2' %}">Google</a>
         </form>
 
     </div>

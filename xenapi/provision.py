@@ -18,6 +18,7 @@
 # a VM is installed from this template. It does not apply to templates
 # which have been created from real VMs -- they have their own disks.
 
+import XenAPI
 import xml.dom.minidom
 
 class Disk:

@@ -30,6 +30,8 @@ class FakeXenServer(object):
         self.VIFs = {}
         self.VBDs = {}
         self.VM_operations = []
+        self.hosts = {}
+        self.pools = {}
 
     def getSession(self, hostname=hostname, username=username,
                    password=password):
@@ -109,6 +111,19 @@ class FakeXenServer(object):
                 VBDs.append((VDI_SRs[VBD["VDI"]], ref))
         return sorted(VBDs)
 
+    def add_host(self, API_version_major, API_version_minor, **kw):
+        ref = mkref("host")
+        kw['API_version_major'] = API_version_major
+        kw['API_version_minor'] = API_version_minor
+        self.hosts[ref] = kw
+        return ref
+
+    def add_pool(self, master_host, **kw):
+        ref = mkref("pool")
+        kw['master'] = master_host
+        self.pools[ref] = kw
+        return ref
+
     # XMLRPC handler methods.
 
     def h_session_login_with_password(self, username, password):
@@ -186,6 +201,22 @@ class FakeXenServer(object):
         assert session in self.sessions
         self.sessions.pop(session)
         return ""
+
+    def h_pool_get_all(self, session):
+        assert session in self.sessions
+        return self.pools.keys()
+
+    def h_pool_get_master(self, session, pool):
+        assert session in self.sessions
+        return self.pools[pool]["master"]
+
+    def h_host_get_API_version_major(self, session, host):
+        assert session in self.sessions
+        return self.hosts[host]["API_version_major"]
+
+    def h_host_get_API_version_minor(self, session, host):
+        assert session in self.sessions
+        return self.hosts[host]["API_version_minor"]
 
 
 class Request(object):

@@ -1,0 +1,6 @@
+coverage:
+  status:
+    patch:
+      default:
+        # We don't have great coverage yet... allow down to 50%
+        target: 50%

@@ -1,0 +1,2 @@
+[flake8]
+exclude = xenapi/*.py,xenserver/migrations/*.py
