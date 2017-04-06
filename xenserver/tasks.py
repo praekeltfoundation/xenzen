@@ -5,6 +5,7 @@ import time
 import urllib2
 from uuid import uuid4
 
+from celery.utils.log import get_task_logger
 from django.conf import settings
 from lxml import etree
 
@@ -13,6 +14,9 @@ from xenserver import iputil
 from xenserver.celery import app
 from xenserver.models import (
     Addresses, AddressPool, XenMetrics, XenServer, XenVM)
+
+
+logger = get_task_logger(__name__)
 
 
 class StorageError(Exception):
@@ -93,7 +97,6 @@ def shutdown_vm(vm):
     session = getSession(
         xenserver.hostname, xenserver.username, xenserver.password)
 
-    logger = shutdown_vm.get_logger()
     logger.info("Stopping %s on %s" % (vm.name, xenserver.hostname))
 
     session.xenapi.VM.shutdown(vm.xsref)
@@ -106,7 +109,6 @@ def reboot_vm(vm):
     session = getSession(
         xenserver.hostname, xenserver.username, xenserver.password)
 
-    logger = reboot_vm.get_logger()
     logger.info("Rebooting %s on %s" % (vm.name, xenserver.hostname))
 
     session.xenapi.VM.hard_reboot(vm.xsref)
@@ -119,7 +121,6 @@ def start_vm(vm):
     session = getSession(
         xenserver.hostname, xenserver.username, xenserver.password)
 
-    logger = start_vm.get_logger()
     logger.info("Starting %s on %s" % (vm.name, xenserver.hostname))
 
     session.xenapi.VM.start(vm.xsref, False, True)
@@ -132,7 +133,6 @@ def destroy_vm(vm):
     session = getSession(
         xenserver.hostname, xenserver.username, xenserver.password)
 
-    logger = destroy_vm.get_logger()
     logger.info("Terminating %s on %s" % (vm.name, xenserver.hostname))
 
     vmobj = session.xenapi.VM.get_record(vm.xsref)
