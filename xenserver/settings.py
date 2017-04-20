@@ -147,6 +147,9 @@ PRETEND_MODE = False
 # XenServer host
 XENZEN_XENAPI_IGNORE_SSL = False
 
+# The number of seconds a task lease will live before it expires
+XENZEN_TASK_LEASE_SECONDS = 3600
+
 try:
     from local_settings import *  # noqa: F401, F403
 except ImportError:
