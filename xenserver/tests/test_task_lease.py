@@ -2,6 +2,8 @@
 Tests for task leases.
 """
 
+from datetime import timedelta
+
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 import pytest
@@ -12,6 +14,15 @@ from xenserver.task_lease import _key, acquire, release
 def session_object_exists(task, args, **filterkw):
     return Session.objects.filter(
         session_key=_key(task, args), **filterkw).exists()
+
+
+def session_object_expires_in(task, args, ttl):
+    # Allow a couple of seconds either side because of variable test timings.
+    now = timezone.now()
+    range_start = now + timedelta(seconds=ttl - 2)
+    range_end = now + timedelta(seconds=ttl + 2)
+    return session_object_exists(
+        task, args, expire_date__gt=range_start, expire_date__lt=range_end)
 
 
 def session_object_expired(task, args):
@@ -93,3 +104,23 @@ class TestTaskLease(object):
         assert not session_object_exists('some_task', 'lease_1')
         assert acquire('some_task', 'lease_1')
         assert session_object_unexpired('some_task', 'lease_1')
+
+    def test_default_ttl(self, settings):
+        """
+        By default, a new lease has a TTL configured from settings.
+        """
+        settings.XENZEN_TASK_LEASE_SECONDS = 10
+        assert acquire('some_task', 'new_lease_1')
+        assert session_object_expires_in('some_task', 'new_lease_1', 10)
+        assert not session_object_expires_in('some_task', 'new_lease_1', 0)
+        assert not session_object_expires_in('some_task', 'new_lease_1', 20)
+
+    def test_custom_ttl(self, settings):
+        """
+        A custom TTL can be provided if desired.
+        """
+        settings.XENZEN_TASK_LEASE_SECONDS = 10
+        assert acquire('some_task', 'new_lease_1', 20)
+        assert session_object_expires_in('some_task', 'new_lease_1', 20)
+        assert not session_object_expires_in('some_task', 'new_lease_1', 10)
+        assert not session_object_expires_in('some_task', 'new_lease_1', 30)

@@ -33,7 +33,7 @@ def acquire(task, args, ttl=None):
         return False
     if ttl is None:
         ttl = settings.XENZEN_TASK_LEASE_SECONDS
-    exp = timezone.now() + timedelta(ttl)
+    exp = timezone.now() + timedelta(seconds=ttl)
     lease = Session(session_key=key, session_data="", expire_date=exp)
     lease.save()
     return True
