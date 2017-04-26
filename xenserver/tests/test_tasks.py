@@ -4,36 +4,22 @@ Some quick and dirty tests for a very small subset of the code.
 
 import pytest
 
-from xenserver.models import Template, XenVM, Zone, AddressPool, XenServer
+from xenserver.models import XenVM, XenServer
 from xenserver import tasks
-from xenserver.tests.helpers import XenServerCollection
+from xenserver.tests.helpers import XenServerHelper
 from xenserver.tests.matchers import (
     ExpectedXenServerVM, ExpectedXenServerVIF, ExtractValues, MatchSorted)
 
 
 @pytest.fixture
-def xs_helpers(monkeypatch):
-    xsc = XenServerCollection()
-    monkeypatch.setattr(tasks, 'getSession', xsc.get_session)
-    return xsc
+def xs_helper(monkeypatch):
+    xshelper = XenServerHelper()
+    monkeypatch.setattr(tasks, 'getSession', xshelper.get_session)
+    return xshelper
 
 
 @pytest.mark.django_db
 class TestCreateVM(object):
-    def setup_server(self, hostname):
-        zone = Zone.objects.create(name="foozone")
-        AddressPool.objects.create(
-            subnet="10.0.0.0/24", gateway="10.1.2.3", zone=zone, version=4)
-        mem = 64*1024*1024*1024
-        return XenServer.objects.create(
-            hostname=hostname, username="u", password="p", zone=zone,
-            memory=mem, mem_free=mem)
-
-    def setup_template(self, name, cores=1, memory=2048, diskspace=10240,
-                       iso="installer.iso"):
-        return Template.objects.create(
-            name=name, cores=cores, memory=memory, diskspace=diskspace,
-            iso=iso)
 
     def setup_vm(self, name, template, status="Provisioning", **kw):
         params = {
@@ -77,14 +63,14 @@ class TestCreateVM(object):
     xapi_versions = pytest.mark.parametrize('xapi_version', [(1, 1), (1, 2)])
 
     @xapi_versions
-    def test_create_vm_simple(self, xapi_version, xs_helpers):
+    def test_create_vm_simple(self, xapi_version, xs_helper):
         """
         We can create a new VM using mostly default values.
         """
-        xsh = xs_helpers.new_host('xenserver01.local', xapi_version)
-        template = self.setup_template("footempl")
-        xs = self.setup_server('xenserver01.local')
+        xsh = xs_helper.new_host('xenserver01.local', xapi_version)
+        template = xs_helper.db_template("footempl")
         vm = self.setup_vm("foovm", template)
+        xs = XenServer.objects.get(hostname='xenserver01.local')
 
         assert vm.xsref == ''
         assert xsh.api.VMs == {}
@@ -124,14 +110,14 @@ class TestCreateVM(object):
         assert xsh.api.VM_operations == [(vm.xsref, "start")]
 
     @xapi_versions
-    def test_create_vm_second_vif(self, xapi_version, xs_helpers):
+    def test_create_vm_second_vif(self, xapi_version, xs_helper):
         """
         We can create a new VM with a second VIF.
         """
-        xsh = xs_helpers.new_host('xenserver01.local', xapi_version)
-        template = self.setup_template("footempl")
-        xs = self.setup_server('xenserver01.local')
+        xsh = xs_helper.new_host('xenserver01.local', xapi_version)
+        template = xs_helper.db_template("footempl")
         vm = self.setup_vm("foovm", template)
+        xs = XenServer.objects.get(hostname='xenserver01.local')
 
         assert vm.xsref == ''
         assert xsh.api.VMs == {}

@@ -2,18 +2,22 @@
 Test helpers.
 """
 
+from xenserver.models import Template, Zone, AddressPool, XenServer
 from xenserver.tests.fake_xen_server import FakeXenServer
+
+
+HOST_MEM = 64*1024*1024*1024
 
 
 class FakeXenHost(object):
     """
     A wrapper around a single xen server and its associated API data.
     """
-    def __init__(self, hostname, xenapi_version=None):
-        xenapi_version = (1, 2) if xenapi_version is None else xenapi_version
+    def __init__(self, hostname, xapi_version=None):
+        xapi_version = (1, 2) if xapi_version is None else xapi_version
         self.hostname = hostname
         self.api = FakeXenServer()
-        self.host_ref = self.api.add_host(xenapi_version[0], xenapi_version[1])
+        self.host_ref = self.api.add_host(xapi_version[0], xapi_version[1])
         self.api.add_pool(self.host_ref)
         self.net = {}
         self.pif = {}
@@ -39,11 +43,11 @@ class FakeXenHost(object):
         return self.api.getSession()
 
 
-def new_host_helper(hostname, xenapi_version=None, isos=('installer.iso',)):
+def new_fake_host(hostname, xapi_version=None, isos=('installer.iso',)):
     """
-    Create a new host helper with default setup.
+    Create a new fake host with default setup.
     """
-    host = FakeXenHost(hostname, xenapi_version)
+    host = FakeXenHost(hostname, xapi_version)
     host.add_network('eth0', 'xenbr0', gateway='192.168.199.1')
     host.add_network('eth1', 'xenbr1')
     host.add_sr('local', 'Local storage', 'lvm')
@@ -51,17 +55,20 @@ def new_host_helper(hostname, xenapi_version=None, isos=('installer.iso',)):
     return host
 
 
-class XenServerCollection(object):
+class XenServerHelper(object):
     def __init__(self):
         self.hosts = {}
         self.isos = ["installer.iso"]
 
-    def new_host(self, hostname, xenapi_version=None):
+    def new_host(self, hostname, xapi_version=None):
         """
-        Create a new host helper with default setup in this collection.
+        Create a new host with default setup, including default db objects.
         """
-        host = new_host_helper(hostname, xenapi_version, self.isos)
+        host = new_fake_host(hostname, xapi_version, self.isos)
         self.add_existing_host(host)
+        zone = self.db_zone("zone1")
+        self.db_addresspool("192.168.199.0/24", "192.168.199.1", zone)
+        self.db_xenserver(hostname, zone)
         return host
 
     def add_existing_host(self, host):
@@ -70,6 +77,25 @@ class XenServerCollection(object):
         nonstandard hosts.
         """
         self.hosts[host.hostname] = host
+
+    def db_zone(self, name):
+        return Zone.objects.get_or_create(name=name)[0]
+
+    def db_addresspool(self, subnet, gateway, zone, version=4):
+        return AddressPool.objects.get_or_create(
+            subnet=subnet, gateway=gateway, zone=zone, version=version)[0]
+
+    def db_xenserver(self, hostname, zone, memory=HOST_MEM, mem_free=HOST_MEM,
+                     username="u", password="p"):
+        return XenServer.objects.get_or_create(
+            hostname=hostname, zone=zone, memory=memory, mem_free=mem_free,
+            username=username, password=password)[0]
+
+    def db_template(self, name, cores=1, memory=2048, diskspace=10240,
+                    iso="installer.iso"):
+        return Template.objects.get_or_create(
+            name=name, cores=cores, memory=memory, diskspace=diskspace,
+            iso=iso)[0]
 
     def get_session(self, hostname, username=None, password=None):
         return self.hosts[hostname].get_session()
