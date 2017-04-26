@@ -68,8 +68,8 @@ class XenServerHelper(object):
         self.add_existing_host(host)
         zone = self.db_zone("zone1")
         self.db_addresspool("192.168.199.0/24", "192.168.199.1", zone)
-        self.db_xenserver(hostname, zone)
-        return host
+        xs = self.db_xenserver(hostname, zone)
+        return (host, xs)
 
     def add_existing_host(self, host):
         """

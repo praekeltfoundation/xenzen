@@ -13,13 +13,54 @@ from xenserver.tests.matchers import (
 
 @pytest.fixture
 def xs_helper(monkeypatch):
+    """
+    Provide a XenServerHelper instance and monkey-patch xenserver.tasks to use
+    sessions from that instance instead of making real API calls.
+    """
     xshelper = XenServerHelper()
     monkeypatch.setattr(tasks, 'getSession', xshelper.get_session)
     return xshelper
 
 
+class TaskCatcher(object):
+    def __init__(self, monkeypatch):
+        self.mp = monkeypatch
+
+    def catch_async(self, task, f=lambda *a: a):
+        """
+        Return a list that will be populated with the args of any call to the
+        given task.
+        """
+        calls = []
+        self.mp.setattr(task, 'apply_async', lambda *a: calls.append(f(*a)))
+        return calls
+
+    def catch_updateServer(self):
+        """
+        Special case of catch_async for updateServer.
+        """
+        return self.catch_async(
+            tasks.updateServer, lambda args, kwargs: args[0].hostname)
+
+
+def updateServer_argf(args, kwargs):
+    return args[0].hostname
+
+
+@pytest.fixture
+def task_catcher(monkeypatch):
+    """
+    Monkey-patch the given task's apply_async() method to add calls to a
+    list instead of queueing the task.
+    """
+    return TaskCatcher(monkeypatch)
+
+
 @pytest.mark.django_db
 class TestCreateVM(object):
+    """
+    Test xenserver.tasks.create_vm task.
+    """
 
     def setup_vm(self, name, template, status="Provisioning", **kw):
         params = {
@@ -67,10 +108,9 @@ class TestCreateVM(object):
         """
         We can create a new VM using mostly default values.
         """
-        xsh = xs_helper.new_host('xenserver01.local', xapi_version)
+        xsh, xs = xs_helper.new_host('xenserver01.local', xapi_version)
         template = xs_helper.db_template("footempl")
         vm = self.setup_vm("foovm", template)
-        xs = XenServer.objects.get(hostname='xenserver01.local')
 
         assert vm.xsref == ''
         assert xsh.api.VMs == {}
@@ -92,7 +132,7 @@ class TestCreateVM(object):
         ])
 
         # The VM data structure should match the values we passed to
-        # _create_vm().
+        # create_vm().
         assert xsh.api.VMs.keys() == [vm.xsref]
         assert self.expected_vm(
             template, xsh.sr['local'], VIFs=[ev.VIF],
@@ -100,7 +140,7 @@ class TestCreateVM(object):
         ) == xsh.api.VMs[vm.xsref]
 
         # The VIF data structures should match the values we passed to
-        # _create_vm().
+        # create_vm().
         assert xsh.api.VIFs.keys() == [ev.VIF.value]
         assert ExpectedXenServerVIF(
             device="0", VM=vm.xsref, network=xsh.net['eth0'],
@@ -114,10 +154,9 @@ class TestCreateVM(object):
         """
         We can create a new VM with a second VIF.
         """
-        xsh = xs_helper.new_host('xenserver01.local', xapi_version)
+        xsh, xs = xs_helper.new_host('xenserver01.local', xapi_version)
         template = xs_helper.db_template("footempl")
         vm = self.setup_vm("foovm", template)
-        xs = XenServer.objects.get(hostname='xenserver01.local')
 
         assert vm.xsref == ''
         assert xsh.api.VMs == {}
@@ -142,7 +181,7 @@ class TestCreateVM(object):
         ])
 
         # The VM data structure should match the values we passed to
-        # _create_vm().
+        # create_vm().
         assert xsh.api.VMs.keys() == [vm.xsref]
         assert self.expected_vm(
             template, xsh.sr['local'], VIFs=[ev.pub_VIF, ev.prv_VIF],
@@ -150,7 +189,7 @@ class TestCreateVM(object):
         ) == xsh.api.VMs[vm.xsref]
 
         # The VIF data structures should match the values we passed to
-        # _create_vm().
+        # create_vm().
         assert MatchSorted([ev.pub_VIF, ev.prv_VIF]) == xsh.api.VIFs.keys()
         assert ExpectedXenServerVIF(
             device="0", VM=vm.xsref, network=xsh.net['eth0'],
@@ -161,3 +200,38 @@ class TestCreateVM(object):
 
         # The VM should be started.
         assert xsh.api.VM_operations == [(vm.xsref, "start")]
+
+
+@pytest.mark.django_db
+class TestUpdateVms(object):
+    """
+    Test xenserver.tasks.updateVms task.
+    """
+
+    def test_no_servers(self, xs_helper, task_catcher):
+        """
+        Nothing to do if we have no servers.
+        """
+        us_calls = task_catcher.catch_updateServer()
+        tasks.updateVms.apply()
+        assert us_calls == []
+
+    def test_one_server(self, xs_helper, task_catcher):
+        """
+        A single server will be updated.
+        """
+        xs_helper.new_host('xs01.local')
+        us_calls = task_catcher.catch_updateServer()
+        tasks.updateVms.apply()
+        assert us_calls == ['xs01.local']
+
+    def test_three_servers(self, xs_helper, task_catcher):
+        """
+        Multiple servers will be updated.
+        """
+        xs_helper.new_host('xs01.local')
+        xs_helper.new_host('xs02.local')
+        xs_helper.new_host('xs03.local')
+        us_calls = task_catcher.catch_updateServer()
+        tasks.updateVms.apply()
+        assert sorted(us_calls) == ['xs01.local', 'xs02.local', 'xs03.local']
