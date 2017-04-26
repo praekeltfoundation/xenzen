@@ -4,7 +4,7 @@ Some quick and dirty tests for a very small subset of the code.
 
 import pytest
 
-from xenserver.models import XenVM, XenServer
+from xenserver.models import XenVM
 from xenserver import tasks
 from xenserver.tests.helpers import XenServerHelper
 from xenserver.tests.matchers import (
