@@ -5,31 +5,14 @@ Some quick and dirty tests for a very small subset of the code.
 import pytest
 
 from xenserver.models import Template, XenVM
-from xenserver.tasks import _create_vm
-from xenserver.tests.fake_xen_server import FakeXenServer
+from xenserver import tasks
+from xenserver.tests.helpers import new_host_helper
 from xenserver.tests.matchers import (
     ExpectedXenServerVM, ExpectedXenServerVIF, ExtractValues, MatchSorted)
 
 
 @pytest.mark.django_db
 class TestCreateVM(object):
-    def setup_xs_pool_master(self, xenserver, xenapi_version):
-        self.master_host = xenserver.add_host(
-            xenapi_version[0], xenapi_version[1])
-        self.pool = xenserver.add_pool(self.master_host)
-
-    def setup_xs_storage(self, xenserver, iso_names=("installer.iso",)):
-        self.local_SR = xenserver.add_SR('Local storage', 'lvm')
-        self.iso_SR = xenserver.add_SR('ISOs', 'iso')
-        for iso_name in iso_names:
-            xenserver.add_VDI(self.iso_SR, iso_name)
-
-    def setup_xs_networks(self, xenserver):
-        self.pub_net = xenserver.add_network(bridge="xenbr0")
-        self.prv_net = xenserver.add_network(bridge="xenbr1")
-        self.pub_PIF = xenserver.add_PIF(
-            self.pub_net, device="eth0", gateway="10.1.2.3")
-        self.prv_PIF = xenserver.add_PIF(self.prv_net, device="eth1")
 
     def setup_template(self, name, cores=1, memory=2048, diskspace=10240,
                        iso="installer.iso"):
@@ -60,7 +43,7 @@ class TestCreateVM(object):
         """
         assert MatchSorted(spec) == xenserver.list_SR_VBDs_for_VM(VM_ref)
 
-    def expected_vm(self, template, VIFs, VBDs, **kw):
+    def expected_vm(self, template, local_SR, VIFs, VBDs, **kw):
         """
         Build an ExpectedXenServerVM object with some default parameters.
         """
@@ -71,7 +54,7 @@ class TestCreateVM(object):
             "VCPUs_at_startup": "1",
             "memory_static_max": str(template.memory*1024*1024),
             "memory_dynamic_max": str(template.memory*1024*1024),
-            "suspend_SR": self.local_SR,
+            "suspend_SR": local_SR,
         }
         return ExpectedXenServerVM(
             VIFs=MatchSorted(VIFs), VBDs=MatchSorted(VBDs), **params)
@@ -84,20 +67,16 @@ class TestCreateVM(object):
         """
         We can create a new VM using mostly default values.
         """
-        xenserver = FakeXenServer()
-        self.setup_xs_pool_master(xenserver, xenapi_version)
-        self.setup_xs_storage(xenserver)
-        self.setup_xs_networks(xenserver)
-        session = xenserver.getSession()
+        xsh = new_host_helper('xenserver01.local', xenapi_version)
         template = self.setup_template("footempl")
         vm = self.setup_vm("foovm", template)
 
         assert vm.xsref == ''
-        assert xenserver.VMs == {}
+        assert xsh.api.VMs == {}
 
-        _create_vm(
-            session, vm, template, None, None, None, None, None, None,
-            extra_network_bridges=[])
+        tasks._create_vm(
+            xsh.get_session(), vm, template,
+            None, None, None, None, None, None, extra_network_bridges=[])
 
         vm.refresh_from_db()
         assert vm.xsref != ''
@@ -105,50 +84,45 @@ class TestCreateVM(object):
         # Make sure the right VIFs and VBDs were created and extract their
         # reference values.
         ev = ExtractValues("VIF", "iso_VBD", "local_VBD")
-        self.extract_VIFs(xenserver, vm.xsref, [(self.pub_net, ev.VIF)])
-        self.extract_VBDs(xenserver, vm.xsref, [
-            (self.iso_SR, ev.iso_VBD),
-            (self.local_SR, ev.local_VBD),
+        self.extract_VIFs(xsh.api, vm.xsref, [(xsh.net['eth0'], ev.VIF)])
+        self.extract_VBDs(xsh.api, vm.xsref, [
+            (xsh.sr['iso'], ev.iso_VBD),
+            (xsh.sr['local'], ev.local_VBD),
         ])
 
         # The VM data structure should match the values we passed to
         # _create_vm().
-        assert xenserver.VMs.keys() == [vm.xsref]
+        assert xsh.api.VMs.keys() == [vm.xsref]
         assert self.expected_vm(
-            template, VIFs=[ev.VIF], VBDs=[ev.iso_VBD, ev.local_VBD],
-        ) == xenserver.VMs[vm.xsref]
+            template, xsh.sr['local'], VIFs=[ev.VIF],
+            VBDs=[ev.iso_VBD, ev.local_VBD],
+        ) == xsh.api.VMs[vm.xsref]
 
         # The VIF data structures should match the values we passed to
         # _create_vm().
-        assert xenserver.VIFs.keys() == [ev.VIF.value]
+        assert xsh.api.VIFs.keys() == [ev.VIF.value]
         assert ExpectedXenServerVIF(
-            device="0", VM=vm.xsref, network=self.pub_net,
-        ) == xenserver.VIFs[ev.VIF.value]
+            device="0", VM=vm.xsref, network=xsh.net['eth0'],
+        ) == xsh.api.VIFs[ev.VIF.value]
 
         # The VM should be started.
-        assert xenserver.VM_operations == [(vm.xsref, "start")]
+        assert xsh.api.VM_operations == [(vm.xsref, "start")]
 
     @xenapi_versions
     def test_create_vm_second_vif(self, xenapi_version):
         """
         We can create a new VM with a second VIF.
-
-        # TODO: Actually implement second network interface support.
         """
-        xenserver = FakeXenServer()
-        self.setup_xs_pool_master(xenserver, xenapi_version)
-        self.setup_xs_storage(xenserver)
-        self.setup_xs_networks(xenserver)
-        session = xenserver.getSession()
+        xsh = new_host_helper('xenserver01.local', xenapi_version)
         template = self.setup_template("footempl")
         vm = self.setup_vm("foovm", template)
 
         assert vm.xsref == ''
-        assert xenserver.VMs == {}
+        assert xsh.api.VMs == {}
 
-        # TODO: Add second network interface.
-        _create_vm(
-            session, vm, template, None, None, None, None, None, None,
+        tasks._create_vm(
+            xsh.get_session(), vm, template,
+            None, None, None, None, None, None,
             extra_network_bridges=['xenbr1'])
 
         vm.refresh_from_db()
@@ -157,32 +131,32 @@ class TestCreateVM(object):
         # Make sure the right VIFs and VBDs were created and extract their
         # reference values.
         ev = ExtractValues("pub_VIF", "prv_VIF", "iso_VBD", "local_VBD")
-        self.extract_VIFs(xenserver, vm.xsref, [
-            (self.pub_net, ev.pub_VIF),
-            (self.prv_net, ev.prv_VIF),
+        self.extract_VIFs(xsh.api, vm.xsref, [
+            (xsh.net['eth0'], ev.pub_VIF),
+            (xsh.net['eth1'], ev.prv_VIF),
         ])
-        self.extract_VBDs(xenserver, vm.xsref, [
-            (self.iso_SR, ev.iso_VBD),
-            (self.local_SR, ev.local_VBD),
+        self.extract_VBDs(xsh.api, vm.xsref, [
+            (xsh.sr['iso'], ev.iso_VBD),
+            (xsh.sr['local'], ev.local_VBD),
         ])
 
         # The VM data structure should match the values we passed to
         # _create_vm().
-        assert xenserver.VMs.keys() == [vm.xsref]
+        assert xsh.api.VMs.keys() == [vm.xsref]
         assert self.expected_vm(
-            template, VIFs=[ev.pub_VIF, ev.prv_VIF],
+            template, xsh.sr['local'], VIFs=[ev.pub_VIF, ev.prv_VIF],
             VBDs=[ev.iso_VBD, ev.local_VBD],
-        ) == xenserver.VMs[vm.xsref]
+        ) == xsh.api.VMs[vm.xsref]
 
         # The VIF data structures should match the values we passed to
         # _create_vm().
-        assert MatchSorted([ev.pub_VIF, ev.prv_VIF]) == xenserver.VIFs.keys()
+        assert MatchSorted([ev.pub_VIF, ev.prv_VIF]) == xsh.api.VIFs.keys()
         assert ExpectedXenServerVIF(
-            device="0", VM=vm.xsref, network=self.pub_net,
-        ) == xenserver.VIFs[ev.pub_VIF.value]
+            device="0", VM=vm.xsref, network=xsh.net['eth0'],
+        ) == xsh.api.VIFs[ev.pub_VIF.value]
         assert ExpectedXenServerVIF(
-            device="1", VM=vm.xsref, network=self.prv_net,
-        ) == xenserver.VIFs[ev.prv_VIF.value]
+            device="1", VM=vm.xsref, network=xsh.net['eth1'],
+        ) == xsh.api.VIFs[ev.prv_VIF.value]
 
         # The VM should be started.
-        assert xenserver.VM_operations == [(vm.xsref, "start")]
+        assert xsh.api.VM_operations == [(vm.xsref, "start")]
