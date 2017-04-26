@@ -40,6 +40,9 @@ class FakeXenHost(object):
 
 
 def new_host_helper(hostname, xenapi_version=None, isos=('installer.iso',)):
+    """
+    Create a new host helper with default setup.
+    """
     host = FakeXenHost(hostname, xenapi_version)
     host.add_network('eth0', 'xenbr0', gateway='192.168.199.1')
     host.add_network('eth1', 'xenbr1')
@@ -54,14 +57,19 @@ class XenServerCollection(object):
         self.isos = ["installer.iso"]
 
     def new_host(self, hostname, xenapi_version=None):
-        self.add_existing_host(
-            new_host_helper(hostname, xenapi_version, self.isos))
+        """
+        Create a new host helper with default setup in this collection.
+        """
+        host = new_host_helper(hostname, xenapi_version, self.isos)
+        self.add_existing_host(host)
+        return host
 
     def add_existing_host(self, host):
         """
-        This is for adding a nonstandard host.
+        Add an existing host helper to this collection. Primarily useful for
+        nonstandard hosts.
         """
         self.hosts[host.hostname] = host
 
-    def get_session(self, hostname):
+    def get_session(self, hostname, username=None, password=None):
         return self.hosts[hostname].get_session()
