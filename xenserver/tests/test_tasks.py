@@ -43,10 +43,6 @@ class TaskCatcher(object):
             tasks.updateServer, lambda args, kwargs: args[0].hostname)
 
 
-def updateServer_argf(args, kwargs):
-    return args[0].hostname
-
-
 @pytest.fixture
 def task_catcher(monkeypatch):
     """
