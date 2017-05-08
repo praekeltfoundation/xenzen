@@ -42,6 +42,13 @@ class TaskCatcher(object):
         return self.catch_async(
             tasks.updateServer, lambda args, kwargs: args[0].hostname)
 
+    def catch_updateVm(self):
+        """
+        Special case of catch_async for updateVm.
+        """
+        return self.catch_async(
+            tasks.updateVm, lambda args, kwargs: (args[1], args[2].name))
+
 
 @pytest.fixture
 def task_catcher(monkeypatch):
@@ -50,6 +57,14 @@ def task_catcher(monkeypatch):
     list instead of queueing the task.
     """
     return TaskCatcher(monkeypatch)
+
+
+def apply_task(task, *args, **kw):
+    """
+    Wrapper around <task>.apply(...).get() to make sure the task properly
+    propagates exceptions, etc.
+    """
+    task.apply(*args, **kw).get()
 
 
 @pytest.mark.django_db
@@ -111,9 +126,9 @@ class TestCreateVM(object):
         assert vm.xsref == ''
         assert xsh.api.VMs == {}
 
-        tasks.create_vm.apply(
-            [vm, xs, template, None, None, None, None, None, None],
-            {'extra_network_bridges': []})
+        apply_task(tasks.create_vm,
+                   [vm, xs, template, None, None, None, None, None, None],
+                   {'extra_network_bridges': []})
 
         vm.refresh_from_db()
         assert vm.xsref != ''
@@ -157,9 +172,9 @@ class TestCreateVM(object):
         assert vm.xsref == ''
         assert xsh.api.VMs == {}
 
-        tasks.create_vm.apply(
-            [vm, xs, template, None, None, None, None, None, None],
-            {'extra_network_bridges': ['xenbr1']})
+        apply_task(tasks.create_vm,
+                   [vm, xs, template, None, None, None, None, None, None],
+                   {'extra_network_bridges': ['xenbr1']})
 
         vm.refresh_from_db()
         assert vm.xsref != ''
@@ -209,7 +224,7 @@ class TestUpdateVms(object):
         Nothing to do if we have no servers.
         """
         us_calls = task_catcher.catch_updateServer()
-        tasks.updateVms.apply()
+        apply_task(tasks.updateVms)
         assert us_calls == []
 
     def test_one_server(self, xs_helper, task_catcher):
@@ -218,7 +233,7 @@ class TestUpdateVms(object):
         """
         xs_helper.new_host('xs01.local')
         us_calls = task_catcher.catch_updateServer()
-        tasks.updateVms.apply()
+        apply_task(tasks.updateVms)
         assert us_calls == ['xs01.local']
 
     def test_three_servers(self, xs_helper, task_catcher):
@@ -229,5 +244,34 @@ class TestUpdateVms(object):
         xs_helper.new_host('xs02.local')
         xs_helper.new_host('xs03.local')
         us_calls = task_catcher.catch_updateServer()
-        tasks.updateVms.apply()
+        apply_task(tasks.updateVms)
         assert sorted(us_calls) == ['xs01.local', 'xs02.local', 'xs03.local']
+
+
+@pytest.mark.django_db
+class TestUpdateServer(object):
+    """
+    Test xenserver.tasks.updateServer task.
+    """
+
+    def test_first_run(self, xs_helper, task_catcher):
+        """
+        The first run of updateServer() after a new host is added will update
+        the two fields that reflect resource usage.
+        """
+        _, xs01db = xs_helper.new_host('xs01.local')
+        uv_calls = task_catcher.catch_updateVm()
+        xs01before = xs_helper.get_db_xenserver_dict('xs01.local')
+        apply_task(tasks.updateServer, [xs01db])
+        xs01after = xs_helper.get_db_xenserver_dict('xs01.local')
+        # Some fields have changed...
+        assert xs01before != xs01after
+        # ... but only these two.
+        filtered_before = dict_without(xs01before, 'mem_free', 'cpu_util')
+        filtered_after = dict_without(xs01after, 'mem_free', 'cpu_util')
+        assert filtered_before == filtered_after
+        assert uv_calls == []
+
+
+def dict_without(d, *f):
+    return {k: v for k, v in d.items() if k not in f}

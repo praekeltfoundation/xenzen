@@ -5,6 +5,9 @@ import xmlrpclib
 import xenapi
 
 
+MEM_OVERHEAD = 1*1024*1024*1024
+
+
 def mkref(name):
     return "Ref:%s:%s" % (name, uuid4())
 
@@ -32,6 +35,7 @@ class FakeXenServer(object):
         self.VM_operations = []
         self.hosts = {}
         self.pools = {}
+        self.host_metrics = {}
 
     def getSession(self, hostname=hostname, username=username,
                    password=password):
@@ -111,11 +115,16 @@ class FakeXenServer(object):
                 VBDs.append((VDI_SRs[VBD["VDI"]], ref))
         return sorted(VBDs)
 
-    def add_host(self, API_version_major, API_version_minor, **kw):
+    def add_host(self, API_version, mem, **kw):
         ref = mkref("host")
-        kw['API_version_major'] = API_version_major
-        kw['API_version_minor'] = API_version_minor
+        metrics_ref = mkref("host_metrics")
+        kw['metrics'] = metrics_ref
+        kw['API_version_major'], kw['API_version_minor'] = API_version
         self.hosts[ref] = kw
+        self.host_metrics[metrics_ref] = {
+            "memory_total": mem,
+            "memory_free": mem - MEM_OVERHEAD,
+        }
         return ref
 
     def add_pool(self, master_host, **kw):
@@ -217,6 +226,35 @@ class FakeXenServer(object):
     def h_host_get_API_version_minor(self, session, host):
         assert session in self.sessions
         return self.hosts[host]["API_version_minor"]
+
+    def h_host_get_all(self, session):
+        assert session in self.sessions
+        return self.hosts.keys()
+
+    def h_host_get_record(self, session, host):
+        # NOTE: This returns whatever we have in the host dict. It does not
+        # validate or filter fields in any way.
+        assert session in self.sessions
+        return self.hosts[host]
+
+    def h_host_get_metrics(self, session, host):
+        assert session in self.sessions
+        return self.hosts[host]['metrics']
+
+    def h_host_metrics_get_record(self, session, metrics):
+        # NOTE: This returns a partial metrics dict containing only the fields
+        # we directly use.
+        assert session in self.sessions
+        md = self.host_metrics[metrics]
+        # TODO: Subtract VM memory usage.
+        return {
+            "memory_total": str(md["memory_total"]),
+            "memory_free": str(md["memory_free"]),
+        }
+
+    def h_VM_get_all_records(self, session):
+        assert session in self.sessions
+        return self.VMs
 
 
 class Request(object):

@@ -6,18 +6,24 @@ from xenserver.models import Template, Zone, AddressPool, XenServer
 from xenserver.tests.fake_xen_server import FakeXenServer
 
 
-HOST_MEM = 64*1024*1024*1024
+HOST_MEM = 64*1024
+HOST_CPUS = 16
 
 
 class FakeXenHost(object):
     """
     A wrapper around a single xen server and its associated API data.
     """
-    def __init__(self, hostname, xapi_version=None):
+    def __init__(self, hostname, xapi_version=None, mem=HOST_MEM,
+                 cpus=HOST_CPUS):
         xapi_version = (1, 2) if xapi_version is None else xapi_version
         self.hostname = hostname
         self.api = FakeXenServer()
-        self.host_ref = self.api.add_host(xapi_version[0], xapi_version[1])
+        self.host_ref = self.api.add_host(
+            xapi_version,
+            mem=mem*1024*1024,
+            cpu_info={'cpu_count': cpus},
+        )
         self.api.add_pool(self.host_ref)
         self.net = {}
         self.pif = {}
@@ -38,6 +44,9 @@ class FakeXenHost(object):
         self.sr[name] = self.api.add_SR(label, kind)
         for vdi in vdis:
             self.api.add_VDI(self.sr[name], vdi)
+
+    def get_info(self):
+        return self.api.hosts[self.host_ref]
 
     def get_session(self):
         return self.api.getSession()
@@ -85,11 +94,18 @@ class XenServerHelper(object):
         return AddressPool.objects.get_or_create(
             subnet=subnet, gateway=gateway, zone=zone, version=version)[0]
 
+    def get_db_xenserver(self, hostname):
+        return XenServer.objects.get(hostname=hostname)
+
+    def get_db_xenserver_dict(self, hostname):
+        [xsdict] = XenServer.objects.filter(hostname=hostname).values()
+        return xsdict
+
     def db_xenserver(self, hostname, zone, memory=HOST_MEM, mem_free=HOST_MEM,
-                     username="u", password="p"):
+                     cores=HOST_CPUS, username="u", password="p"):
         return XenServer.objects.get_or_create(
             hostname=hostname, zone=zone, memory=memory, mem_free=mem_free,
-            username=username, password=password)[0]
+            cores=cores, username=username, password=password)[0]
 
     def db_template(self, name, cores=1, memory=2048, diskspace=10240,
                     iso="installer.iso"):
