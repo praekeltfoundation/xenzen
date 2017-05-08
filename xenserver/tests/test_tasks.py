@@ -4,9 +4,8 @@ Some quick and dirty tests for a very small subset of the code.
 
 import pytest
 
-from xenserver.models import XenVM
 from xenserver import tasks
-from xenserver.tests.helpers import XenServerHelper
+from xenserver.tests.helpers import VM_MEM, XenServerHelper
 from xenserver.tests.matchers import (
     ExpectedXenServerVM, ExpectedXenServerVIF, ExtractValues, MatchSorted)
 
@@ -73,15 +72,6 @@ class TestCreateVM(object):
     Test xenserver.tasks.create_vm task.
     """
 
-    def setup_vm(self, name, template, status="Provisioning", **kw):
-        params = {
-            "sockets": template.cores,
-            "memory": template.memory,
-        }
-        params.update(kw)
-        return XenVM.objects.create(
-            name="foovm", status="Provisioning", template=template, **params)
-
     def extract_VIFs(self, xenserver, VM_ref, spec):
         """
         Get the VIFs for the given VM and match them to a list of (network,
@@ -96,7 +86,7 @@ class TestCreateVM(object):
         """
         assert MatchSorted(spec) == xenserver.list_SR_VBDs_for_VM(VM_ref)
 
-    def expected_vm(self, template, local_SR, VIFs, VBDs, **kw):
+    def expected_vm(self, local_SR, VIFs, VBDs, **kw):
         """
         Build an ExpectedXenServerVM object with some default parameters.
         """
@@ -105,8 +95,8 @@ class TestCreateVM(object):
             "name_label": "None.None",
             "VCPUs_max": "1",
             "VCPUs_at_startup": "1",
-            "memory_static_max": str(template.memory*1024*1024),
-            "memory_dynamic_max": str(template.memory*1024*1024),
+            "memory_static_max": str(VM_MEM*1024*1024),
+            "memory_dynamic_max": str(VM_MEM*1024*1024),
             "suspend_SR": local_SR,
         }
         return ExpectedXenServerVM(
@@ -120,14 +110,13 @@ class TestCreateVM(object):
         We can create a new VM using mostly default values.
         """
         xsh, xs = xs_helper.new_host('xenserver01.local', xapi_version)
-        template = xs_helper.db_template("footempl")
-        vm = self.setup_vm("foovm", template)
+        vm = xs_helper.new_vm("foovm", status="Provisioning")
 
         assert vm.xsref == ''
         assert xsh.api.VMs == {}
 
         apply_task(tasks.create_vm,
-                   [vm, xs, template, None, None, None, None, None, None],
+                   [vm, xs, vm.template, None, None, None, None, None, None],
                    {'extra_network_bridges': []})
 
         vm.refresh_from_db()
@@ -146,8 +135,7 @@ class TestCreateVM(object):
         # create_vm().
         assert xsh.api.VMs.keys() == [vm.xsref]
         assert self.expected_vm(
-            template, xsh.sr['local'], VIFs=[ev.VIF],
-            VBDs=[ev.iso_VBD, ev.local_VBD],
+            xsh.sr['local'], VIFs=[ev.VIF], VBDs=[ev.iso_VBD, ev.local_VBD],
         ) == xsh.api.VMs[vm.xsref]
 
         # The VIF data structures should match the values we passed to
@@ -166,14 +154,13 @@ class TestCreateVM(object):
         We can create a new VM with a second VIF.
         """
         xsh, xs = xs_helper.new_host('xenserver01.local', xapi_version)
-        template = xs_helper.db_template("footempl")
-        vm = self.setup_vm("foovm", template)
+        vm = xs_helper.new_vm("foovm", status="Provisioning")
 
         assert vm.xsref == ''
         assert xsh.api.VMs == {}
 
         apply_task(tasks.create_vm,
-                   [vm, xs, template, None, None, None, None, None, None],
+                   [vm, xs, vm.template, None, None, None, None, None, None],
                    {'extra_network_bridges': ['xenbr1']})
 
         vm.refresh_from_db()
@@ -195,7 +182,7 @@ class TestCreateVM(object):
         # create_vm().
         assert xsh.api.VMs.keys() == [vm.xsref]
         assert self.expected_vm(
-            template, xsh.sr['local'], VIFs=[ev.pub_VIF, ev.prv_VIF],
+            xsh.sr['local'], VIFs=[ev.pub_VIF, ev.prv_VIF],
             VBDs=[ev.iso_VBD, ev.local_VBD],
         ) == xsh.api.VMs[vm.xsref]
 

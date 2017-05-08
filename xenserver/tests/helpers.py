@@ -2,12 +2,15 @@
 Test helpers.
 """
 
-from xenserver.models import Template, Zone, AddressPool, XenServer
+from xenserver.models import Template, Zone, AddressPool, XenServer, XenVM
 from xenserver.tests.fake_xen_server import FakeXenServer
 
 
 HOST_MEM = 64*1024
 HOST_CPUS = 16
+VM_MEM = 2048
+VM_CPUS = 1
+VM_DISK = 10240
 
 
 class FakeXenHost(object):
@@ -87,6 +90,14 @@ class XenServerHelper(object):
         """
         self.hosts[host.hostname] = host
 
+    def new_vm(self, name, template="default", **kw):
+        """
+        Create a new vm with default setup, including default db objects.
+        """
+        template = self.db_template("default")
+        vm = self.db_xenvm(name, template, **kw)
+        return vm
+
     def db_zone(self, name):
         return Zone.objects.get_or_create(name=name)[0]
 
@@ -107,11 +118,20 @@ class XenServerHelper(object):
             hostname=hostname, zone=zone, memory=memory, mem_free=mem_free,
             cores=cores, username=username, password=password)[0]
 
-    def db_template(self, name, cores=1, memory=2048, diskspace=10240,
-                    iso="installer.iso"):
+    def db_template(self, name, cores=VM_CPUS, memory=VM_MEM,
+                    diskspace=VM_DISK, iso="installer.iso"):
         return Template.objects.get_or_create(
             name=name, cores=cores, memory=memory, diskspace=diskspace,
             iso=iso)[0]
+
+    def db_xenvm(self, name, template, status="Running", **kw):
+        params = {
+            "sockets": template.cores,
+            "memory": template.memory,
+        }
+        params.update(kw)
+        return XenVM.objects.get_or_create(
+            name=name, status=status, template=template, **params)[0]
 
     def get_session(self, hostname, username=None, password=None):
         return self.hosts[hostname].get_session()
