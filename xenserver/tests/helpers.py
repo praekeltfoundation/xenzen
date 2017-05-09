@@ -2,7 +2,8 @@
 Test helpers.
 """
 
-from xenserver.models import Template, Zone, AddressPool, XenServer, XenVM
+from xenserver.models import (
+    AddressPool, Project, Template, XenServer, XenVM, Zone)
 from xenserver.tests.fake_xen_server import FakeXenServer
 
 
@@ -11,6 +12,8 @@ HOST_CPUS = 16
 VM_MEM = 2048
 VM_CPUS = 1
 VM_DISK = 10240
+DEFAULT_SUBNET = "192.168.199.0/24"
+DEFAULT_GATEWAY = "192.168.199.1"
 
 
 class FakeXenHost(object):
@@ -60,7 +63,7 @@ def new_fake_host(hostname, xapi_version=None, isos=('installer.iso',)):
     Create a new fake host with default setup.
     """
     host = FakeXenHost(hostname, xapi_version)
-    host.add_network('eth0', 'xenbr0', gateway='192.168.199.1')
+    host.add_network('eth0', 'xenbr0', gateway=DEFAULT_GATEWAY)
     host.add_network('eth1', 'xenbr1')
     host.add_sr('local', 'Local storage', 'lvm')
     host.add_sr('iso', 'ISOs', 'iso', isos)
@@ -79,7 +82,7 @@ class XenServerHelper(object):
         host = new_fake_host(hostname, xapi_version, self.isos)
         self.add_existing_host(host)
         zone = self.db_zone("zone1")
-        self.db_addresspool("192.168.199.0/24", "192.168.199.1", zone)
+        self.db_addresspool(DEFAULT_SUBNET, DEFAULT_GATEWAY, zone)
         xs = self.db_xenserver(hostname, zone)
         return (host, xs)
 
@@ -123,6 +126,9 @@ class XenServerHelper(object):
         return Template.objects.get_or_create(
             name=name, cores=cores, memory=memory, diskspace=diskspace,
             iso=iso)[0]
+
+    def db_project(self, name):
+        return Project.objects.get_or_create(name=name)[0]
 
     def db_xenvm(self, name, template, status="Running", **kw):
         params = {

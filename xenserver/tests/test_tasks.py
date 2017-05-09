@@ -7,58 +7,9 @@ from testtools.assertions import assert_that
 from testtools.matchers import Equals, MatchesSetwise
 
 from xenserver import tasks
-from xenserver.tests.helpers import VM_MEM, XenServerHelper
+from xenserver.tests.helpers import VM_MEM
 from xenserver.tests.matchers import (
     ExtractValues, MatchesSetOfTuples, MatchesXenServerVIF, MatchesXenServerVM)
-
-
-@pytest.fixture
-def xs_helper(monkeypatch):
-    """
-    Provide a XenServerHelper instance and monkey-patch xenserver.tasks to use
-    sessions from that instance instead of making real API calls.
-    """
-    xshelper = XenServerHelper()
-    monkeypatch.setattr(tasks, 'getSession', xshelper.get_session)
-    return xshelper
-
-
-class TaskCatcher(object):
-    def __init__(self, monkeypatch):
-        self.mp = monkeypatch
-
-    def catch_async(self, task, f=lambda *a: a):
-        """
-        Return a list that will be populated with the args of any call to the
-        given task.
-        """
-        calls = []
-        self.mp.setattr(task, 'apply_async', lambda *a: calls.append(f(*a)))
-        return calls
-
-    def catch_updateServer(self):
-        """
-        Special case of catch_async for updateServer.
-        """
-        return self.catch_async(
-            tasks.updateServer, lambda args, kwargs: args[0].hostname)
-
-    def catch_updateVm(self):
-        """
-        Special case of catch_async for updateVm.
-        """
-        return self.catch_async(
-            tasks.updateVm,
-            lambda args, kwargs: (args[0].hostname, args[1], args[2]))
-
-
-@pytest.fixture
-def task_catcher(monkeypatch):
-    """
-    Monkey-patch the given task's apply_async() method to add calls to a
-    list instead of queueing the task.
-    """
-    return TaskCatcher(monkeypatch)
 
 
 def apply_task(task, *args, **kw):
