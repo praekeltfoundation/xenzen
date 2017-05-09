@@ -202,10 +202,10 @@ class TestUpdateServer(object):
         The first run of updateServer() after a new host is added will update
         the two fields that reflect resource usage.
         """
-        _, xs01db = xs_helper.new_host('xs01.local')
+        _, xs = xs_helper.new_host('xs01.local')
         uv_calls = task_catcher.catch_updateVm()
         xs01before = xs_helper.get_db_xenserver_dict('xs01.local')
-        apply_task(tasks.updateServer, [xs01db])
+        apply_task(tasks.updateServer, [xs])
         xs01after = xs_helper.get_db_xenserver_dict('xs01.local')
         # Some fields have changed...
         assert xs01before != xs01after
@@ -220,11 +220,11 @@ class TestUpdateServer(object):
         If a server has a single VM running on it, we schedule a single
         updateVm task.
         """
-        _, xs01db = xs_helper.new_host('xs01.local')
-        vm = xs_helper.new_vm(xs01db, 'vm01.local')
+        _, xs = xs_helper.new_host('xs01.local')
+        vm = xs_helper.new_vm(xs, 'vm01.local')
         uv_calls = task_catcher.catch_updateVm()
 
-        apply_task(tasks.updateServer, [xs01db])
+        apply_task(tasks.updateServer, [xs])
         assert_that(uv_calls, MatchesSetOfLists([
             ('xs01.local', vm.xsref, MatchesVMNamed('vm01.local'))]))
 
@@ -233,12 +233,12 @@ class TestUpdateServer(object):
         If a server has two VMs running on it, we schedule an updateVm task for
         each.
         """
-        _, xs01db = xs_helper.new_host('xs01.local')
-        vm01 = xs_helper.new_vm(xs01db, 'vm01.local')
-        vm02 = xs_helper.new_vm(xs01db, 'vm02.local')
+        _, xs = xs_helper.new_host('xs01.local')
+        vm01 = xs_helper.new_vm(xs, 'vm01.local')
+        vm02 = xs_helper.new_vm(xs, 'vm02.local')
         uv_calls = task_catcher.catch_updateVm()
 
-        apply_task(tasks.updateServer, [xs01db])
+        apply_task(tasks.updateServer, [xs])
         assert_that(uv_calls, MatchesSetOfLists([
             ('xs01.local', vm01.xsref, MatchesVMNamed('vm01.local')),
             ('xs01.local', vm02.xsref, MatchesVMNamed('vm02.local')),
