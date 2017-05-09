@@ -5,7 +5,8 @@ Some helpers for testing XenServer stuff.
 from copy import deepcopy
 
 from testtools.matchers import (
-    Always, Equals, MatchesDict, MatchesListwise, MatchesSetwise, Never)
+    Always, ContainsDict, Equals, MatchesDict, MatchesListwise,
+    MatchesSetwise, Never)
 
 
 class ExtractValue(object):
@@ -55,9 +56,13 @@ def listmatcher(l, first_only=False):
     return MatchesListwise([mkmatcher(v) for v in l], first_only=first_only)
 
 
-def MatchesSetOfTuples(list_of_tuples):
+def MatchesSetOfLists(list_of_tuples):
     return MatchesSetwise(*[
         listmatcher(t, first_only=True)for t in list_of_tuples])
+
+
+def MatchesVMNamed(name):
+    return ContainsDict({'name_label': Equals(name)})
 
 
 class BaseXenServerMatcher(object):
@@ -90,9 +95,9 @@ class MatchesXenServerVM(BaseXenServerMatcher):
         'affinity': '',
         'is_a_template': False,
         'auto_power_on': False,
-        'memory_static_max': Never(),
+        'memory_static_max': Always(),
         'memory_static_min': '536870912',
-        'memory_dynamic_max': Never(),
+        'memory_dynamic_max': Always(),
         'memory_dynamic_min': '536870912',
         'VCPUs_max': '1',
         'VCPUs_at_startup': '1',

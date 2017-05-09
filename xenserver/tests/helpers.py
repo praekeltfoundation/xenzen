@@ -93,12 +93,17 @@ class XenServerHelper(object):
         """
         self.hosts[host.hostname] = host
 
-    def new_vm(self, name, template="default", **kw):
+    def new_vm(self, xs, name, template="default", **kw):
         """
         Create a new vm with default setup, including default db objects.
+        NOTE: This uses tasks.create_vm to wrangle all the xenserver objects.
         """
+        from xenserver import tasks
         template = self.db_template("default")
         vm = self.db_xenvm(name, template, **kw)
+        host, domain = name.split('.', 1)
+        tasks.create_vm(
+            vm, xs, template, host, domain, None, None, None, None)
         return vm
 
     def db_zone(self, name):

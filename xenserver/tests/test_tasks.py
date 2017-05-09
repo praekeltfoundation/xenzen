@@ -9,7 +9,8 @@ from testtools.matchers import Equals, MatchesSetwise
 from xenserver import tasks
 from xenserver.tests.helpers import VM_MEM
 from xenserver.tests.matchers import (
-    ExtractValues, MatchesSetOfTuples, MatchesXenServerVIF, MatchesXenServerVM)
+    ExtractValues, MatchesSetOfLists, MatchesVMNamed, MatchesXenServerVIF,
+    MatchesXenServerVM)
 
 
 def apply_task(task, *args, **kw):
@@ -33,7 +34,7 @@ class TestCreateVM(object):
         """
         assert_that(
             xenserver.list_network_VIFs_for_VM(VM_ref),
-            MatchesSetOfTuples(spec))
+            MatchesSetOfLists(spec))
 
     def extract_VBDs(self, xenserver, VM_ref, spec):
         """
@@ -42,7 +43,7 @@ class TestCreateVM(object):
         """
         assert_that(
             xenserver.list_SR_VBDs_for_VM(VM_ref),
-            MatchesSetOfTuples(spec))
+            MatchesSetOfLists(spec))
 
     def matches_vm(self, local_SR, VIFs, VBDs, **kw):
         """
@@ -65,13 +66,14 @@ class TestCreateVM(object):
         We can create a new VM using mostly default values.
         """
         xsh, xs = xs_helper.new_host('xenserver01.local', xapi_version)
-        vm = xs_helper.new_vm("foovm", status="Provisioning")
+        templ = xs_helper.db_template("default")
+        vm = xs_helper.db_xenvm("foovm", templ, status="Provisioning")
 
         assert vm.xsref == ''
         assert xsh.api.VMs == {}
 
         apply_task(tasks.create_vm,
-                   [vm, xs, vm.template, None, None, None, None, None, None],
+                   [vm, xs, templ, None, None, None, None, None, None],
                    {'extra_network_bridges': []})
 
         vm.refresh_from_db()
@@ -109,13 +111,14 @@ class TestCreateVM(object):
         We can create a new VM with a second VIF.
         """
         xsh, xs = xs_helper.new_host('xenserver01.local', xapi_version)
-        vm = xs_helper.new_vm("foovm", status="Provisioning")
+        templ = xs_helper.db_template("default")
+        vm = xs_helper.db_xenvm("foovm", templ, status="Provisioning")
 
         assert vm.xsref == ''
         assert xsh.api.VMs == {}
 
         apply_task(tasks.create_vm,
-                   [vm, xs, vm.template, None, None, None, None, None, None],
+                   [vm, xs, templ, None, None, None, None, None, None],
                    {'extra_network_bridges': ['xenbr1']})
 
         vm.refresh_from_db()
@@ -211,6 +214,35 @@ class TestUpdateServer(object):
         filtered_after = dict_without(xs01after, 'mem_free', 'cpu_util')
         assert_that(filtered_before, Equals(filtered_after))
         assert uv_calls == []
+
+    def test_one_vm(self, xs_helper, task_catcher):
+        """
+        If a server has a single VM running on it, we schedule a single
+        updateVm task.
+        """
+        _, xs01db = xs_helper.new_host('xs01.local')
+        vm = xs_helper.new_vm(xs01db, 'vm01.local')
+        uv_calls = task_catcher.catch_updateVm()
+
+        apply_task(tasks.updateServer, [xs01db])
+        assert_that(uv_calls, MatchesSetOfLists([
+            ('xs01.local', vm.xsref, MatchesVMNamed('vm01.local'))]))
+
+    def test_two_vms(self, xs_helper, task_catcher):
+        """
+        If a server has two VMs running on it, we schedule an updateVm task for
+        each.
+        """
+        _, xs01db = xs_helper.new_host('xs01.local')
+        vm01 = xs_helper.new_vm(xs01db, 'vm01.local')
+        vm02 = xs_helper.new_vm(xs01db, 'vm02.local')
+        uv_calls = task_catcher.catch_updateVm()
+
+        apply_task(tasks.updateServer, [xs01db])
+        assert_that(uv_calls, MatchesSetOfLists([
+            ('xs01.local', vm01.xsref, MatchesVMNamed('vm01.local')),
+            ('xs01.local', vm02.xsref, MatchesVMNamed('vm02.local')),
+        ]))
 
 
 def dict_without(d, *f):
