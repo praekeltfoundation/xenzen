@@ -94,6 +94,8 @@ class MatchesXenServerVM(BaseXenServerMatcher):
         'user_version': '1',
         'affinity': '',
         'is_a_template': False,
+        'is_control_domain': False,
+        'is_a_snapshot': False,
         'auto_power_on': False,
         'memory_static_max': Always(),
         'memory_static_min': '536870912',
@@ -134,6 +136,8 @@ class MatchesXenServerVM(BaseXenServerMatcher):
         'recommendations': '',
         'PV_args': ' -- quiet console=hvc0',
         'suspend_SR': Never(),
+        'power_state': 'Running',
+        'uuid': Always(),
     }
 
 

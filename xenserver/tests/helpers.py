@@ -100,7 +100,7 @@ class XenServerHelper(object):
         """
         from xenserver import tasks
         template = self.db_template("default")
-        vm = self.db_xenvm(name, template, **kw)
+        vm = self.db_xenvm(xs, name, template, **kw)
         host, domain = name.split('.', 1)
         tasks.create_vm(
             vm, xs, template, host, domain, None, None, None, None)
@@ -135,14 +135,22 @@ class XenServerHelper(object):
     def db_project(self, name):
         return Project.objects.get_or_create(name=name)[0]
 
-    def db_xenvm(self, name, template, status="Running", **kw):
+    def get_db_xenvm(self, name):
+        return XenVM.objects.get(name=name)
+
+    def get_db_xenvm_dict(self, name):
+        [vmdict] = XenVM.objects.filter(name=name).values()
+        return vmdict
+
+    def db_xenvm(self, xs, name, template, status="Running", **kw):
         params = {
             "sockets": template.cores,
             "memory": template.memory,
         }
         params.update(kw)
         return XenVM.objects.get_or_create(
-            name=name, status=status, template=template, **params)[0]
+            xenserver=xs, name=name, status=status, template=template,
+            **params)[0]
 
     def get_session(self, hostname, username=None, password=None):
         return self.hosts[hostname].get_session()

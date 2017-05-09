@@ -174,9 +174,17 @@ class FakeXenServer(object):
         return self.PIFs[ref]["network"]
 
     def h_VM_create(self, session, params):
+        print params
         assert session in self.sessions
         ref = mkref("VM")
-        self.VMs[ref] = deepcopy(params)
+        self.VMs[ref] = {
+            'is_a_snapshot': False,
+            'is_a_template': False,
+            'is_control_domain': False,
+            'power_state': 'Running',
+            'uuid': str(uuid4()),
+        }
+        self.VMs[ref].update(deepcopy(params))
         return ref
 
     def h_VIF_create(self, session, params):
@@ -255,6 +263,10 @@ class FakeXenServer(object):
     def h_VM_get_all_records(self, session):
         assert session in self.sessions
         return self.VMs
+
+    def h_VM_get_record(self, session, vm):
+        assert session in self.sessions
+        return self.VMs[vm]
 
 
 class Request(object):

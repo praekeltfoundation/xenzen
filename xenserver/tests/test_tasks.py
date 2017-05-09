@@ -67,7 +67,7 @@ class TestCreateVM(object):
         """
         xsh, xs = xs_helper.new_host('xenserver01.local', xapi_version)
         templ = xs_helper.db_template("default")
-        vm = xs_helper.db_xenvm("foovm", templ, status="Provisioning")
+        vm = xs_helper.db_xenvm(xs, "foovm", templ, status="Provisioning")
 
         assert vm.xsref == ''
         assert xsh.api.VMs == {}
@@ -112,7 +112,7 @@ class TestCreateVM(object):
         """
         xsh, xs = xs_helper.new_host('xenserver01.local', xapi_version)
         templ = xs_helper.db_template("default")
-        vm = xs_helper.db_xenvm("foovm", templ, status="Provisioning")
+        vm = xs_helper.db_xenvm(xs, "foovm", templ, status="Provisioning")
 
         assert vm.xsref == ''
         assert xsh.api.VMs == {}
@@ -207,12 +207,11 @@ class TestUpdateServer(object):
         xs01before = xs_helper.get_db_xenserver_dict('xs01.local')
         apply_task(tasks.updateServer, [xs])
         xs01after = xs_helper.get_db_xenserver_dict('xs01.local')
-        # Some fields have changed...
-        assert xs01before != xs01after
-        # ... but only these two.
-        filtered_before = dict_without(xs01before, 'mem_free', 'cpu_util')
-        filtered_after = dict_without(xs01after, 'mem_free', 'cpu_util')
-        assert_that(filtered_before, Equals(filtered_after))
+        # Two fields have changed.
+        assert xs01before.pop('mem_free') != xs01after.pop('mem_free')
+        assert xs01before.pop('cpu_util') != xs01after.pop('cpu_util')
+        # All the others are the same.
+        assert xs01before == xs01after
         assert uv_calls == []
 
     def test_one_vm(self, xs_helper, task_catcher):
@@ -245,5 +244,24 @@ class TestUpdateServer(object):
         ]))
 
 
-def dict_without(d, *f):
-    return {k: v for k, v in d.items() if k not in f}
+@pytest.mark.django_db
+class TestUpdateVm(object):
+    """
+    Test xenserver.tasks.updateVm task.
+    """
+
+    def test_first_run(self, xs_helper, task_catcher):
+        """
+        The first run of updateVm() after a new VM is provisioned will update
+        the uuid field.
+        """
+        xsh, xs = xs_helper.new_host('xs01.local')
+        vm = xs_helper.new_vm(xs, 'vm01.local')
+        vm01before = xs_helper.get_db_xenvm_dict('vm01.local')
+        vmobj = xsh.get_session().xenapi.VM.get_record(vm.xsref)
+        apply_task(tasks.updateVm, [xs, vm.xsref, vmobj])
+        vm01after = xs_helper.get_db_xenvm_dict('vm01.local')
+        # One field has changed.
+        assert vm01before.pop('uuid') != vm01after.pop('uuid')
+        # All the others are the same.
+        assert vm01before == vm01after
