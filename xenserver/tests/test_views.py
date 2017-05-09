@@ -4,11 +4,13 @@ Some quick and dirty tests for a very small subset of the code.
 
 from django.core.urlresolvers import reverse
 import pytest
+from testtools.assertions import assert_that
+from testtools.matchers import Always, MatchesListwise
 
 from xenserver.models import (
     Addresses, AddressPool, Project, Template, XenServer, XenVM, Zone)
 from xenserver import tasks
-from xenserver.tests.matchers import ANY_VALUE
+from xenserver.tests.matchers import listmatcher
 
 
 @pytest.mark.django_db
@@ -71,10 +73,9 @@ class TestProvision(object):
         [addr] = Addresses.objects.all()
         [vm] = XenVM.objects.all()
 
-        assert [(
+        assert_that(createvm_calls, MatchesListwise([listmatcher([
             "session", vm, templ, "foo", "example.com", addr.ip,
-            "255.255.255.0", "10.1.2.3", ANY_VALUE, [],
-        )] == createvm_calls
+            "255.255.255.0", "10.1.2.3", Always(), []])]))
 
     def test_provision_second_vif(self, monkeypatch, settings, admin_client):
         """
@@ -105,7 +106,6 @@ class TestProvision(object):
         [addr] = Addresses.objects.all()
         [vm] = XenVM.objects.all()
 
-        assert [(
+        assert_that(createvm_calls, MatchesListwise([listmatcher([
             "session", vm, templ, "foo", "example.com", addr.ip,
-            "255.255.255.0", "10.1.2.3", ANY_VALUE, ["xenbr1"],
-        )] == createvm_calls
+            "255.255.255.0", "10.1.2.3", Always(), ["xenbr1"]])]))

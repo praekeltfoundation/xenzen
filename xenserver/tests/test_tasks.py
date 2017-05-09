@@ -3,11 +3,13 @@ Some quick and dirty tests for a very small subset of the code.
 """
 
 import pytest
+from testtools.assertions import assert_that
+from testtools.matchers import Equals, MatchesSetwise
 
 from xenserver import tasks
 from xenserver.tests.helpers import VM_MEM, XenServerHelper
 from xenserver.tests.matchers import (
-    ExpectedXenServerVM, ExpectedXenServerVIF, ExtractValues, MatchSorted)
+    ExtractValues, MatchesSetOfTuples, MatchesXenServerVIF, MatchesXenServerVM)
 
 
 @pytest.fixture
@@ -46,7 +48,8 @@ class TaskCatcher(object):
         Special case of catch_async for updateVm.
         """
         return self.catch_async(
-            tasks.updateVm, lambda args, kwargs: (args[1], args[2].name))
+            tasks.updateVm,
+            lambda args, kwargs: (args[0].hostname, args[1], args[2]))
 
 
 @pytest.fixture
@@ -77,30 +80,31 @@ class TestCreateVM(object):
         Get the VIFs for the given VM and match them to a list of (network,
         VIF) ref pairs.
         """
-        assert MatchSorted(spec) == xenserver.list_network_VIFs_for_VM(VM_ref)
+        assert_that(
+            xenserver.list_network_VIFs_for_VM(VM_ref),
+            MatchesSetOfTuples(spec))
 
     def extract_VBDs(self, xenserver, VM_ref, spec):
         """
         Get the VBDs for the given VM and match them to a list of (SR, VBD)
         ref pairs.
         """
-        assert MatchSorted(spec) == xenserver.list_SR_VBDs_for_VM(VM_ref)
+        assert_that(
+            xenserver.list_SR_VBDs_for_VM(VM_ref),
+            MatchesSetOfTuples(spec))
 
-    def expected_vm(self, local_SR, VIFs, VBDs, **kw):
+    def matches_vm(self, local_SR, VIFs, VBDs, **kw):
         """
         Build an ExpectedXenServerVM object with some default parameters.
         """
         params = {
-            "PV_args": " -- quiet console=hvc0",
             "name_label": "None.None",
-            "VCPUs_max": "1",
-            "VCPUs_at_startup": "1",
             "memory_static_max": str(VM_MEM*1024*1024),
             "memory_dynamic_max": str(VM_MEM*1024*1024),
             "suspend_SR": local_SR,
         }
-        return ExpectedXenServerVM(
-            VIFs=MatchSorted(VIFs), VBDs=MatchSorted(VBDs), **params)
+        return MatchesXenServerVM(
+            VIFs=MatchesSetwise(*VIFs), VBDs=MatchesSetwise(*VBDs), **params)
 
     xapi_versions = pytest.mark.parametrize('xapi_version', [(1, 1), (1, 2)])
 
@@ -125,7 +129,9 @@ class TestCreateVM(object):
         # Make sure the right VIFs and VBDs were created and extract their
         # reference values.
         ev = ExtractValues("VIF", "iso_VBD", "local_VBD")
-        self.extract_VIFs(xsh.api, vm.xsref, [(xsh.net['eth0'], ev.VIF)])
+        self.extract_VIFs(xsh.api, vm.xsref, [
+            (xsh.net['eth0'], ev.VIF),
+        ])
         self.extract_VBDs(xsh.api, vm.xsref, [
             (xsh.sr['iso'], ev.iso_VBD),
             (xsh.sr['local'], ev.local_VBD),
@@ -134,16 +140,14 @@ class TestCreateVM(object):
         # The VM data structure should match the values we passed to
         # create_vm().
         assert xsh.api.VMs.keys() == [vm.xsref]
-        assert self.expected_vm(
-            xsh.sr['local'], VIFs=[ev.VIF], VBDs=[ev.iso_VBD, ev.local_VBD],
-        ) == xsh.api.VMs[vm.xsref]
+        assert_that(xsh.api.VMs[vm.xsref], self.matches_vm(
+            xsh.sr['local'], VIFs=[ev.VIF], VBDs=[ev.iso_VBD, ev.local_VBD]))
 
         # The VIF data structures should match the values we passed to
         # create_vm().
         assert xsh.api.VIFs.keys() == [ev.VIF.value]
-        assert ExpectedXenServerVIF(
-            device="0", VM=vm.xsref, network=xsh.net['eth0'],
-        ) == xsh.api.VIFs[ev.VIF.value]
+        assert_that(xsh.api.VIFs[ev.VIF.value], MatchesXenServerVIF(
+            device="0", VM=vm.xsref, network=xsh.net['eth0']))
 
         # The VM should be started.
         assert xsh.api.VM_operations == [(vm.xsref, "start")]
@@ -181,20 +185,18 @@ class TestCreateVM(object):
         # The VM data structure should match the values we passed to
         # create_vm().
         assert xsh.api.VMs.keys() == [vm.xsref]
-        assert self.expected_vm(
+        assert_that(xsh.api.VMs[vm.xsref], self.matches_vm(
             xsh.sr['local'], VIFs=[ev.pub_VIF, ev.prv_VIF],
-            VBDs=[ev.iso_VBD, ev.local_VBD],
-        ) == xsh.api.VMs[vm.xsref]
+            VBDs=[ev.iso_VBD, ev.local_VBD]))
 
         # The VIF data structures should match the values we passed to
         # create_vm().
-        assert MatchSorted([ev.pub_VIF, ev.prv_VIF]) == xsh.api.VIFs.keys()
-        assert ExpectedXenServerVIF(
-            device="0", VM=vm.xsref, network=xsh.net['eth0'],
-        ) == xsh.api.VIFs[ev.pub_VIF.value]
-        assert ExpectedXenServerVIF(
-            device="1", VM=vm.xsref, network=xsh.net['eth1'],
-        ) == xsh.api.VIFs[ev.prv_VIF.value]
+        assert_that(
+            xsh.api.VIFs.keys(), MatchesSetwise(ev.pub_VIF, ev.prv_VIF))
+        assert_that(xsh.api.VIFs[ev.pub_VIF.value], MatchesXenServerVIF(
+            device="0", VM=vm.xsref, network=xsh.net['eth0']))
+        assert_that(xsh.api.VIFs[ev.prv_VIF.value], MatchesXenServerVIF(
+            device="1", VM=vm.xsref, network=xsh.net['eth1']))
 
         # The VM should be started.
         assert xsh.api.VM_operations == [(vm.xsref, "start")]
@@ -256,7 +258,7 @@ class TestUpdateServer(object):
         # ... but only these two.
         filtered_before = dict_without(xs01before, 'mem_free', 'cpu_util')
         filtered_after = dict_without(xs01after, 'mem_free', 'cpu_util')
-        assert filtered_before == filtered_after
+        assert_that(filtered_before, Equals(filtered_after))
         assert uv_calls == []
 
 
