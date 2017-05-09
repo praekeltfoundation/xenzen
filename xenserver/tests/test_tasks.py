@@ -4,7 +4,7 @@ Some quick and dirty tests for a very small subset of the code.
 
 import pytest
 from testtools.assertions import assert_that
-from testtools.matchers import Equals, MatchesSetwise
+from testtools.matchers import MatchesSetwise
 
 from xenserver import tasks
 from xenserver.tests.helpers import VM_MEM
