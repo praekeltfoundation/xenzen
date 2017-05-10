@@ -1,92 +1,54 @@
-from unittest import TestCase
+from testtools.assertions import assert_that
+from testtools.matchers import Is, Not
 
-from xenserver.tests.matchers import NO_VALUE, ANY_VALUE, ExtractValue
+from xenserver.tests.matchers import ExtractValue
 
 
-class TestXenServerHelpers(TestCase):
+class TestExtractValue(object):
 
-    def test_NO_VALUE_identity(self):
-        """
-        NO_VALUE is NO_VALUE
-        """
-        assert NO_VALUE is NO_VALUE
-        assert NO_VALUE is not 3
-
-    def test_NO_VALUE_equality(self):
-        """
-        NO_VALUE is equal to nothing
-        """
-        assert NO_VALUE != NO_VALUE
-        assert NO_VALUE != 1
-        assert NO_VALUE != "hello"
-
-    def test_NO_VALUE_repr(self):
-        """
-        NO_VALUE stringifies sensibly.
-        """
-        assert str(NO_VALUE) == "<NO VALUE>"
-        assert repr(NO_VALUE) == "<NO VALUE>"
-
-    def test_ANY_VALUE_identity(self):
-        """
-        ANY_VALUE is ANY_VALUE
-        """
-        assert ANY_VALUE is ANY_VALUE
-        assert ANY_VALUE is not 3
-
-    def test_ANY_VALUE_equality(self):
-        """
-        ANY_VALUE is equal to everything
-        """
-        assert ANY_VALUE == ANY_VALUE
-        assert ANY_VALUE == 1
-        assert ANY_VALUE == "hello"
-
-    def test_ANY_VALUE_repr(self):
-        """
-        ANY_VALUE stringifies sensibly.
-        """
-        assert str(ANY_VALUE) == "<ANY VALUE>"
-        assert repr(ANY_VALUE) == "<ANY VALUE>"
-
-    def test_ExtractValue_extraction(self):
+    def test_extraction(self):
         """
         An ExtractValue instance will extract whatever value it is first
-        compared to and return True for the comparison.
+        compared to and will pass the match.
         """
         ev = ExtractValue("a")
-        assert ev.value is NO_VALUE
-        assert ev == 7
+        assert not ev.matched
+        assert ev.value is None
+        assert_that(7, ev)
+        assert ev.matched
         assert ev.value == 7
 
         ev = ExtractValue("b")
-        assert ev.value is NO_VALUE
-        assert ev == "hello"
+        assert not ev.matched
+        assert ev.value is None
+        assert_that("hello", ev)
+        assert ev.matched
         assert ev.value == "hello"
 
-    def test_ExtractValue_equality(self):
+    def test_matching(self):
         """
-        An ExtractValue instance that already has a value will compare as if it
-        were that value.
+        An ExtractValue instance that already has a value v will match as if it
+        were Equals(v).
         """
         ev = ExtractValue("a")
-        assert ev == 7
-        assert ev != 8
-        assert ev == 7
+        assert_that(7, ev)
+        assert_that(8, Not(ev))
+        assert_that(7, ev)
+        assert_that(ev.match(7), Is(None))
+        assert_that(ev.match(19), Not(Is(None)))
 
         ev = ExtractValue("b")
-        assert ev == "hello"
-        assert ev != 7
-        assert ev == "hello"
-        assert ev != "bye"
+        assert_that("hello", ev)
+        assert_that(7, Not(ev))
+        assert_that("hello", ev)
+        assert_that(ev.match("hello"), Is(None))
+        assert_that(ev.match("bye"), Not(Is(None)))
 
-    def test_ExtractValue_repr(self):
+    def test_str(self):
         """
         ExtractValue instances stringify sensibly.
         """
         ev = ExtractValue("a")
-        assert str(ev) == "<ExtractValue a=<NO VALUE>>"
-        assert repr(ev) == "<ExtractValue a=<NO VALUE>>"
-        ev == 3
-        assert str(ev) == "<ExtractValue a=3>"
-        assert repr(ev) == "<ExtractValue a=3>"
+        assert str(ev) == "ExtractValue(a)"
+        assert_that(3, ev)
+        assert str(ev) == "ExtractValue(a)=[3]"
