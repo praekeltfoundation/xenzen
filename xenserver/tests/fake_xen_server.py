@@ -5,6 +5,9 @@ import xmlrpclib
 import xenapi
 
 
+# This represents the memory overhead (as reported in the XenServer API). We
+# don't particularly care how accurate it is, so we arbitrarily use 1GiB to
+# make sure `memory_free` is always less than `memory_total`.
 MEM_OVERHEAD = 1*1024*1024*1024
 
 
