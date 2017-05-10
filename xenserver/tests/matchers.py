@@ -58,7 +58,7 @@ def listmatcher(l, first_only=False):
 
 def MatchesSetOfLists(list_of_tuples):
     return MatchesSetwise(*[
-        listmatcher(t, first_only=True)for t in list_of_tuples])
+        listmatcher(t, first_only=True) for t in list_of_tuples])
 
 
 def MatchesVMNamed(name):

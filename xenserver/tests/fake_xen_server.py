@@ -174,7 +174,6 @@ class FakeXenServer(object):
         return self.PIFs[ref]["network"]
 
     def h_VM_create(self, session, params):
-        print params
         assert session in self.sessions
         ref = mkref("VM")
         self.VMs[ref] = {
