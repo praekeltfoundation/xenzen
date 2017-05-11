@@ -191,6 +191,10 @@ class TestUpdateVms(object):
         assert sorted(us_calls) == ['xs01.local', 'xs02.local', 'xs03.local']
 
 
+def no_urlopen(url):
+    raise NotImplementedError('urllib2.urlopen() excised for tests.')
+
+
 @pytest.mark.django_db
 class TestUpdateServer(object):
     """
@@ -201,7 +205,11 @@ class TestUpdateServer(object):
         """
         The first run of updateServer() after a new host is added will update
         the two fields that reflect resource usage.
+
+        NOTE: We stub out urllib2.urlopen() so that it doesn't try to talk to
+        the network. The failure to fetch host metrics is silently ignored.
         """
+        task_catcher.patch_urlopen(no_urlopen)
         _, xs = xs_helper.new_host('xs01.local')
         uv_calls = task_catcher.catch_updateVm()
         xs01before = xs_helper.get_db_xenserver_dict('xs01.local')
@@ -218,7 +226,11 @@ class TestUpdateServer(object):
         """
         If a server has a single VM running on it, we schedule a single
         updateVm task.
+
+        NOTE: We stub out urllib2.urlopen() so that it doesn't try to talk to
+        the network. The failure to fetch host metrics is silently ignored.
         """
+        task_catcher.patch_urlopen(no_urlopen)
         _, xs = xs_helper.new_host('xs01.local')
         vm = xs_helper.new_vm(xs, 'vm01.local')
         uv_calls = task_catcher.catch_updateVm()
@@ -231,7 +243,11 @@ class TestUpdateServer(object):
         """
         If a server has two VMs running on it, we schedule an updateVm task for
         each.
+
+        NOTE: We stub out urllib2.urlopen() so that it doesn't try to talk to
+        the network. The failure to fetch host metrics is silently ignored.
         """
+        task_catcher.patch_urlopen(no_urlopen)
         _, xs = xs_helper.new_host('xs01.local')
         vm01 = xs_helper.new_vm(xs, 'vm01.local')
         vm02 = xs_helper.new_vm(xs, 'vm02.local')

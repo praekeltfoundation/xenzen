@@ -5,6 +5,16 @@ class TaskCatcher(object):
     def __init__(self, monkeypatch):
         self.mp = monkeypatch
 
+    def patch_urlopen(self, f):
+        """
+        Replace urllib2.urlopen() with the given function.
+
+        As far as I can tell, the only thing that calls urlopen() is
+        tasks.getHostMetrics().
+        """
+        import urllib2
+        self.mp.setattr(urllib2, 'urlopen', f)
+
     def catch_async(self, task, f=lambda *a: a):
         """
         Return a list that will be populated with the args of any call to the
