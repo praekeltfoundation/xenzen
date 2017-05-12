@@ -709,6 +709,8 @@ def provision(request):
             url = urlparse.urljoin(
                 request.build_absolute_uri(),
                 reverse('get_preseed', kwargs={'id': vmobj.id}))
+            # Some installers don't accept some modern CAs.
+            url = url.replace('https://', 'http://')
 
             tasks.updateAddress(server, vmobj, ip, pool=pool)
 
