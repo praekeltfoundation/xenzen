@@ -10,8 +10,7 @@ install:
   - pip install codecov
 
 script:
-  - coverage run "$(which pytest)"
-  - coverage report -m  && coverage xml
+  - pytest --cov
   - flake8 .
 
 after_success:

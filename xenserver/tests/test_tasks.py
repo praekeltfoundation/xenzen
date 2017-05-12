@@ -3,101 +3,78 @@ Some quick and dirty tests for a very small subset of the code.
 """
 
 import pytest
+from testtools.assertions import assert_that
+from testtools.matchers import MatchesSetwise
 
-from xenserver.models import Template, XenVM
-from xenserver.tasks import _create_vm
-from xenserver.tests.fake_xen_server import FakeXenServer
+from xenserver import tasks
+from xenserver.tests.helpers import VM_MEM
 from xenserver.tests.matchers import (
-    ExpectedXenServerVM, ExpectedXenServerVIF, ExtractValues, MatchSorted)
+    ExtractValues, MatchesSetOfLists, MatchesVMNamed, MatchesXenServerVIF,
+    MatchesXenServerVM)
+
+
+def apply_task(task, *args, **kw):
+    """
+    Wrapper around <task>.apply(...).get() to make sure the task properly
+    propagates exceptions, etc.
+    """
+    task.apply(*args, **kw).get()
 
 
 @pytest.mark.django_db
 class TestCreateVM(object):
-    def setup_xs_pool_master(self, xenserver, xenapi_version):
-        self.master_host = xenserver.add_host(
-            xenapi_version[0], xenapi_version[1])
-        self.pool = xenserver.add_pool(self.master_host)
-
-    def setup_xs_storage(self, xenserver, iso_names=("installer.iso",)):
-        self.local_SR = xenserver.add_SR('Local storage', 'lvm')
-        self.iso_SR = xenserver.add_SR('ISOs', 'iso')
-        for iso_name in iso_names:
-            xenserver.add_VDI(self.iso_SR, iso_name)
-
-    def setup_xs_networks(self, xenserver):
-        self.pub_net = xenserver.add_network(bridge="xenbr0")
-        self.prv_net = xenserver.add_network(bridge="xenbr1")
-        self.pub_PIF = xenserver.add_PIF(
-            self.pub_net, device="eth0", gateway="10.1.2.3")
-        self.prv_PIF = xenserver.add_PIF(self.prv_net, device="eth1")
-
-    def setup_template(self, name, cores=1, memory=2048, diskspace=10240,
-                       iso="installer.iso"):
-        return Template.objects.create(
-            name=name, cores=cores, memory=memory, diskspace=diskspace,
-            iso=iso)
-
-    def setup_vm(self, name, template, status="Provisioning", **kw):
-        params = {
-            "sockets": template.cores,
-            "memory": template.memory,
-        }
-        params.update(kw)
-        return XenVM.objects.create(
-            name="foovm", status="Provisioning", template=template, **params)
+    """
+    Test xenserver.tasks.create_vm task.
+    """
 
     def extract_VIFs(self, xenserver, VM_ref, spec):
         """
         Get the VIFs for the given VM and match them to a list of (network,
         VIF) ref pairs.
         """
-        assert MatchSorted(spec) == xenserver.list_network_VIFs_for_VM(VM_ref)
+        assert_that(
+            xenserver.list_network_VIFs_for_VM(VM_ref),
+            MatchesSetOfLists(spec))
 
     def extract_VBDs(self, xenserver, VM_ref, spec):
         """
         Get the VBDs for the given VM and match them to a list of (SR, VBD)
         ref pairs.
         """
-        assert MatchSorted(spec) == xenserver.list_SR_VBDs_for_VM(VM_ref)
+        assert_that(
+            xenserver.list_SR_VBDs_for_VM(VM_ref),
+            MatchesSetOfLists(spec))
 
-    def expected_vm(self, template, VIFs, VBDs, **kw):
+    def matches_vm(self, local_SR, VIFs, VBDs, **kw):
         """
         Build an ExpectedXenServerVM object with some default parameters.
         """
         params = {
-            "PV_args": " -- quiet console=hvc0",
             "name_label": "None.None",
-            "VCPUs_max": "1",
-            "VCPUs_at_startup": "1",
-            "memory_static_max": str(template.memory*1024*1024),
-            "memory_dynamic_max": str(template.memory*1024*1024),
-            "suspend_SR": self.local_SR,
+            "memory_static_max": str(VM_MEM*1024*1024),
+            "memory_dynamic_max": str(VM_MEM*1024*1024),
+            "suspend_SR": local_SR,
         }
-        return ExpectedXenServerVM(
-            VIFs=MatchSorted(VIFs), VBDs=MatchSorted(VBDs), **params)
+        return MatchesXenServerVM(
+            VIFs=MatchesSetwise(*VIFs), VBDs=MatchesSetwise(*VBDs), **params)
 
-    xenapi_versions = pytest.mark.parametrize('xenapi_version',
-                                              [(1, 1), (1, 2)])
+    xapi_versions = pytest.mark.parametrize('xapi_version', [(1, 1), (1, 2)])
 
-    @xenapi_versions
-    def test_create_vm_simple(self, xenapi_version):
+    @xapi_versions
+    def test_create_vm_simple(self, xapi_version, xs_helper):
         """
         We can create a new VM using mostly default values.
         """
-        xenserver = FakeXenServer()
-        self.setup_xs_pool_master(xenserver, xenapi_version)
-        self.setup_xs_storage(xenserver)
-        self.setup_xs_networks(xenserver)
-        session = xenserver.getSession()
-        template = self.setup_template("footempl")
-        vm = self.setup_vm("foovm", template)
+        xsh, xs = xs_helper.new_host('xenserver01.local', xapi_version)
+        templ = xs_helper.db_template("default")
+        vm = xs_helper.db_xenvm(xs, "foovm", templ, status="Provisioning")
 
         assert vm.xsref == ''
-        assert xenserver.VMs == {}
+        assert xsh.api.VMs == {}
 
-        _create_vm(
-            session, vm, template, None, None, None, None, None, None,
-            extra_network_bridges=[])
+        apply_task(tasks.create_vm,
+                   [vm, xs, templ, None, None, None, None, None, None],
+                   {'extra_network_bridges': []})
 
         vm.refresh_from_db()
         assert vm.xsref != ''
@@ -105,51 +82,44 @@ class TestCreateVM(object):
         # Make sure the right VIFs and VBDs were created and extract their
         # reference values.
         ev = ExtractValues("VIF", "iso_VBD", "local_VBD")
-        self.extract_VIFs(xenserver, vm.xsref, [(self.pub_net, ev.VIF)])
-        self.extract_VBDs(xenserver, vm.xsref, [
-            (self.iso_SR, ev.iso_VBD),
-            (self.local_SR, ev.local_VBD),
+        self.extract_VIFs(xsh.api, vm.xsref, [
+            (xsh.net['eth0'], ev.VIF),
+        ])
+        self.extract_VBDs(xsh.api, vm.xsref, [
+            (xsh.sr['iso'], ev.iso_VBD),
+            (xsh.sr['local'], ev.local_VBD),
         ])
 
         # The VM data structure should match the values we passed to
-        # _create_vm().
-        assert xenserver.VMs.keys() == [vm.xsref]
-        assert self.expected_vm(
-            template, VIFs=[ev.VIF], VBDs=[ev.iso_VBD, ev.local_VBD],
-        ) == xenserver.VMs[vm.xsref]
+        # create_vm().
+        assert xsh.api.VMs.keys() == [vm.xsref]
+        assert_that(xsh.api.VMs[vm.xsref], self.matches_vm(
+            xsh.sr['local'], VIFs=[ev.VIF], VBDs=[ev.iso_VBD, ev.local_VBD]))
 
         # The VIF data structures should match the values we passed to
-        # _create_vm().
-        assert xenserver.VIFs.keys() == [ev.VIF.value]
-        assert ExpectedXenServerVIF(
-            device="0", VM=vm.xsref, network=self.pub_net,
-        ) == xenserver.VIFs[ev.VIF.value]
+        # create_vm().
+        assert xsh.api.VIFs.keys() == [ev.VIF.value]
+        assert_that(xsh.api.VIFs[ev.VIF.value], MatchesXenServerVIF(
+            device="0", VM=vm.xsref, network=xsh.net['eth0']))
 
         # The VM should be started.
-        assert xenserver.VM_operations == [(vm.xsref, "start")]
+        assert xsh.api.VM_operations == [(vm.xsref, "start")]
 
-    @xenapi_versions
-    def test_create_vm_second_vif(self, xenapi_version):
+    @xapi_versions
+    def test_create_vm_second_vif(self, xapi_version, xs_helper):
         """
         We can create a new VM with a second VIF.
-
-        # TODO: Actually implement second network interface support.
         """
-        xenserver = FakeXenServer()
-        self.setup_xs_pool_master(xenserver, xenapi_version)
-        self.setup_xs_storage(xenserver)
-        self.setup_xs_networks(xenserver)
-        session = xenserver.getSession()
-        template = self.setup_template("footempl")
-        vm = self.setup_vm("foovm", template)
+        xsh, xs = xs_helper.new_host('xenserver01.local', xapi_version)
+        templ = xs_helper.db_template("default")
+        vm = xs_helper.db_xenvm(xs, "foovm", templ, status="Provisioning")
 
         assert vm.xsref == ''
-        assert xenserver.VMs == {}
+        assert xsh.api.VMs == {}
 
-        # TODO: Add second network interface.
-        _create_vm(
-            session, vm, template, None, None, None, None, None, None,
-            extra_network_bridges=['xenbr1'])
+        apply_task(tasks.create_vm,
+                   [vm, xs, templ, None, None, None, None, None, None],
+                   {'extra_network_bridges': ['xenbr1']})
 
         vm.refresh_from_db()
         assert vm.xsref != ''
@@ -157,32 +127,157 @@ class TestCreateVM(object):
         # Make sure the right VIFs and VBDs were created and extract their
         # reference values.
         ev = ExtractValues("pub_VIF", "prv_VIF", "iso_VBD", "local_VBD")
-        self.extract_VIFs(xenserver, vm.xsref, [
-            (self.pub_net, ev.pub_VIF),
-            (self.prv_net, ev.prv_VIF),
+        self.extract_VIFs(xsh.api, vm.xsref, [
+            (xsh.net['eth0'], ev.pub_VIF),
+            (xsh.net['eth1'], ev.prv_VIF),
         ])
-        self.extract_VBDs(xenserver, vm.xsref, [
-            (self.iso_SR, ev.iso_VBD),
-            (self.local_SR, ev.local_VBD),
+        self.extract_VBDs(xsh.api, vm.xsref, [
+            (xsh.sr['iso'], ev.iso_VBD),
+            (xsh.sr['local'], ev.local_VBD),
         ])
 
         # The VM data structure should match the values we passed to
-        # _create_vm().
-        assert xenserver.VMs.keys() == [vm.xsref]
-        assert self.expected_vm(
-            template, VIFs=[ev.pub_VIF, ev.prv_VIF],
-            VBDs=[ev.iso_VBD, ev.local_VBD],
-        ) == xenserver.VMs[vm.xsref]
+        # create_vm().
+        assert xsh.api.VMs.keys() == [vm.xsref]
+        assert_that(xsh.api.VMs[vm.xsref], self.matches_vm(
+            xsh.sr['local'], VIFs=[ev.pub_VIF, ev.prv_VIF],
+            VBDs=[ev.iso_VBD, ev.local_VBD]))
 
         # The VIF data structures should match the values we passed to
-        # _create_vm().
-        assert MatchSorted([ev.pub_VIF, ev.prv_VIF]) == xenserver.VIFs.keys()
-        assert ExpectedXenServerVIF(
-            device="0", VM=vm.xsref, network=self.pub_net,
-        ) == xenserver.VIFs[ev.pub_VIF.value]
-        assert ExpectedXenServerVIF(
-            device="1", VM=vm.xsref, network=self.prv_net,
-        ) == xenserver.VIFs[ev.prv_VIF.value]
+        # create_vm().
+        assert_that(
+            xsh.api.VIFs.keys(), MatchesSetwise(ev.pub_VIF, ev.prv_VIF))
+        assert_that(xsh.api.VIFs[ev.pub_VIF.value], MatchesXenServerVIF(
+            device="0", VM=vm.xsref, network=xsh.net['eth0']))
+        assert_that(xsh.api.VIFs[ev.prv_VIF.value], MatchesXenServerVIF(
+            device="1", VM=vm.xsref, network=xsh.net['eth1']))
 
         # The VM should be started.
-        assert xenserver.VM_operations == [(vm.xsref, "start")]
+        assert xsh.api.VM_operations == [(vm.xsref, "start")]
+
+
+@pytest.mark.django_db
+class TestUpdateVms(object):
+    """
+    Test xenserver.tasks.updateVms task.
+    """
+
+    def test_no_servers(self, xs_helper, task_catcher):
+        """
+        Nothing to do if we have no servers.
+        """
+        us_calls = task_catcher.catch_updateServer()
+        apply_task(tasks.updateVms)
+        assert us_calls == []
+
+    def test_one_server(self, xs_helper, task_catcher):
+        """
+        A single server will be updated.
+        """
+        xs_helper.new_host('xs01.local')
+        us_calls = task_catcher.catch_updateServer()
+        apply_task(tasks.updateVms)
+        assert us_calls == ['xs01.local']
+
+    def test_three_servers(self, xs_helper, task_catcher):
+        """
+        Multiple servers will be updated.
+        """
+        xs_helper.new_host('xs01.local')
+        xs_helper.new_host('xs02.local')
+        xs_helper.new_host('xs03.local')
+        us_calls = task_catcher.catch_updateServer()
+        apply_task(tasks.updateVms)
+        assert sorted(us_calls) == ['xs01.local', 'xs02.local', 'xs03.local']
+
+
+def no_urlopen(url):
+    raise NotImplementedError('urllib2.urlopen() excised for tests.')
+
+
+@pytest.mark.django_db
+class TestUpdateServer(object):
+    """
+    Test xenserver.tasks.updateServer task.
+    """
+
+    def test_first_run(self, xs_helper, task_catcher):
+        """
+        The first run of updateServer() after a new host is added will update
+        the two fields that reflect resource usage.
+
+        NOTE: We stub out urllib2.urlopen() so that it doesn't try to talk to
+        the network. The failure to fetch host metrics is silently ignored.
+        """
+        task_catcher.patch_urlopen(no_urlopen)
+        _, xs = xs_helper.new_host('xs01.local')
+        uv_calls = task_catcher.catch_updateVm()
+        xs01before = xs_helper.get_db_xenserver_dict('xs01.local')
+        apply_task(tasks.updateServer, [xs])
+        xs01after = xs_helper.get_db_xenserver_dict('xs01.local')
+        # Two fields have changed.
+        assert xs01before.pop('mem_free') != xs01after.pop('mem_free')
+        assert xs01before.pop('cpu_util') != xs01after.pop('cpu_util')
+        # All the others are the same.
+        assert xs01before == xs01after
+        assert uv_calls == []
+
+    def test_one_vm(self, xs_helper, task_catcher):
+        """
+        If a server has a single VM running on it, we schedule a single
+        updateVm task.
+
+        NOTE: We stub out urllib2.urlopen() so that it doesn't try to talk to
+        the network. The failure to fetch host metrics is silently ignored.
+        """
+        task_catcher.patch_urlopen(no_urlopen)
+        _, xs = xs_helper.new_host('xs01.local')
+        vm = xs_helper.new_vm(xs, 'vm01.local')
+        uv_calls = task_catcher.catch_updateVm()
+
+        apply_task(tasks.updateServer, [xs])
+        assert_that(uv_calls, MatchesSetOfLists([
+            ('xs01.local', vm.xsref, MatchesVMNamed('vm01.local'))]))
+
+    def test_two_vms(self, xs_helper, task_catcher):
+        """
+        If a server has two VMs running on it, we schedule an updateVm task for
+        each.
+
+        NOTE: We stub out urllib2.urlopen() so that it doesn't try to talk to
+        the network. The failure to fetch host metrics is silently ignored.
+        """
+        task_catcher.patch_urlopen(no_urlopen)
+        _, xs = xs_helper.new_host('xs01.local')
+        vm01 = xs_helper.new_vm(xs, 'vm01.local')
+        vm02 = xs_helper.new_vm(xs, 'vm02.local')
+        uv_calls = task_catcher.catch_updateVm()
+
+        apply_task(tasks.updateServer, [xs])
+        assert_that(uv_calls, MatchesSetOfLists([
+            ('xs01.local', vm01.xsref, MatchesVMNamed('vm01.local')),
+            ('xs01.local', vm02.xsref, MatchesVMNamed('vm02.local')),
+        ]))
+
+
+@pytest.mark.django_db
+class TestUpdateVm(object):
+    """
+    Test xenserver.tasks.updateVm task.
+    """
+
+    def test_first_run(self, xs_helper, task_catcher):
+        """
+        The first run of updateVm() after a new VM is provisioned will update
+        the uuid field.
+        """
+        xsh, xs = xs_helper.new_host('xs01.local')
+        vm = xs_helper.new_vm(xs, 'vm01.local')
+        vm01before = xs_helper.get_db_xenvm_dict('vm01.local')
+        vmobj = xsh.get_session().xenapi.VM.get_record(vm.xsref)
+        apply_task(tasks.updateVm, [xs, vm.xsref, vmobj])
+        vm01after = xs_helper.get_db_xenvm_dict('vm01.local')
+        # One field has changed.
+        assert vm01before.pop('uuid') != vm01after.pop('uuid')
+        # All the others are the same.
+        assert vm01before == vm01after

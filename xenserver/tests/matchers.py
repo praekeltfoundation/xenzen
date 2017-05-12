@@ -4,70 +4,32 @@ Some helpers for testing XenServer stuff.
 
 from copy import deepcopy
 
+from testtools.matchers import (
+    Always, ContainsDict, Equals, MatchesDict, MatchesListwise,
+    MatchesSetwise, Never)
 
-class BaseMatcher(object):
+
+class ExtractValue(object):
     """
-    The base class for a matcher that does fancy equality checks.
-    """
-    def match(self, other):
-        raise NotImplementedError()
-
-    def __eq__(self, other):
-        return self.match(other)
-
-    def __ne__(self, other):
-        return not self.match(other)
-
-
-class GenericMatcher(BaseMatcher):
-    """
-    A matcher that accepts an arbitrary match function.
-    """
-    def __init__(self, match, repr_str):
-        self._match_func = match
-        self._repr_str = repr_str
-
-    def match(self, other):
-        return self._match_func(other)
-
-    def __repr__(self):
-        return self._repr_str
-
-
-NO_VALUE = GenericMatcher(lambda _: False, "<NO VALUE>")
-ANY_VALUE = GenericMatcher(lambda _: True, "<ANY VALUE>")
-
-
-class MatchSorted(BaseMatcher):
-    def __init__(self, expected):
-        self._expected = sorted(expected)
-
-    def match(self, other):
-        return self._expected == sorted(other)
-
-    def __repr__(self):
-        return "<SORTED %r>" % (self._expected,)
-
-
-class ExtractValue(BaseMatcher):
-    """
-    A matcher that will extract whatever value it's compared to.
+    A matcher that will remember the first value it's compared to and match
+    against that for all subsequent comparisons.
     """
     def __init__(self, name):
         self.name = name
-        self.value = NO_VALUE
+        self.matched = False
+        self.value = None
 
-    def __repr__(self):
-        return "<ExtractValue %s=%r>" % (self.name, self.value)
+    def __str__(self):
+        val = "=[%s]" % (self.value,) if self.matched else ""
+        return "ExtractValue(%s)%s" % (self.name, val)
 
-    def __cmp__(self, other):
-        return cmp(self.value, other)
-
-    def match(self, other):
-        if self.value is not NO_VALUE:
-            return self.value == other
-        self.value = other
-        return True
+    def match(self, actual):
+        if self.matched:
+            return Equals(self.value).match(actual)
+        else:
+            self.matched = True
+            self.value = actual
+            return None
 
 
 class ExtractValues(object):
@@ -82,7 +44,28 @@ class ExtractValues(object):
         return [getattr(self, name).value for name in names]
 
 
-class ExpectedXenServerObject(BaseMatcher):
+def mkmatcher(x):
+    return x if hasattr(x, 'match') else Equals(x)
+
+
+def dictmatcher(d):
+    return MatchesDict({k: mkmatcher(v) for k, v in d.items()})
+
+
+def listmatcher(l, first_only=False):
+    return MatchesListwise([mkmatcher(v) for v in l], first_only=first_only)
+
+
+def MatchesSetOfLists(list_of_tuples):
+    return MatchesSetwise(*[
+        listmatcher(t, first_only=True) for t in list_of_tuples])
+
+
+def MatchesVMNamed(name):
+    return ContainsDict({'name_label': Equals(name)})
+
+
+class BaseXenServerMatcher(object):
     """
     A base matcher for XenServer objects.
     """
@@ -92,31 +75,34 @@ class ExpectedXenServerObject(BaseMatcher):
         self.fields = fields
         self.expected_fields = deepcopy(self.default_fields)
         self.expected_fields.update(self.fields)
+        self.matcher = dictmatcher(self.expected_fields)
 
     def match(self, other):
-        return self.expected_fields == other
+        return self.matcher.match(other)
 
-    def __repr__(self):
-        return "<%s %r>" % (type(self).__name__, self.expected_fields)
+    def __str__(self):
+        return "%s(**%r)" % (type(self).__name__, self.expected_fields)
 
 
-class ExpectedXenServerVM(ExpectedXenServerObject):
+class MatchesXenServerVM(BaseXenServerMatcher):
     """
     A matcher for a XenServer VM object.
     """
     default_fields = {
-        'name_label': NO_VALUE,
+        'name_label': Never(),
         'name_description': '',
         'user_version': '1',
         'affinity': '',
         'is_a_template': False,
+        'is_control_domain': False,
+        'is_a_snapshot': False,
         'auto_power_on': False,
-        'memory_static_max': NO_VALUE,
+        'memory_static_max': Always(),
         'memory_static_min': '536870912',
-        'memory_dynamic_max': NO_VALUE,
+        'memory_dynamic_max': Always(),
         'memory_dynamic_min': '536870912',
-        'VCPUs_max': NO_VALUE,
-        'VCPUs_at_startup': NO_VALUE,
+        'VCPUs_max': '1',
+        'VCPUs_at_startup': '1',
         'VCPUs_params': {},
         'actions_after_shutdown': 'destroy',
         'actions_after_reboot': 'restart',
@@ -136,9 +122,9 @@ class ExpectedXenServerVM(ExpectedXenServerObject):
             'acpi': '1',
         },
         'PCI_bus': '',
-        'other_config': {
+        'other_config': dictmatcher({
             'auto_poweron': 'true',
-            'mac_seed': ANY_VALUE,
+            'mac_seed': Always(),
             'install-distro': 'debianlike',
             'base_template_name': 'Ubuntu Precise Pangolin 12.04 (64-bit)',
             'install-arch': 'amd64',
@@ -146,21 +132,23 @@ class ExpectedXenServerVM(ExpectedXenServerObject):
             'install-repository': 'cdrom',
             'debian-release': 'precise',
             'linux_template': 'true'
-        },
+        }),
         'recommendations': '',
-        'PV_args': NO_VALUE,
-        'suspend_SR': NO_VALUE,
+        'PV_args': ' -- quiet console=hvc0',
+        'suspend_SR': Never(),
+        'power_state': 'Running',
+        'uuid': Always(),
     }
 
 
-class ExpectedXenServerVIF(ExpectedXenServerObject):
+class MatchesXenServerVIF(BaseXenServerMatcher):
     """
     A matcher for a XenServer VIF object.
     """
     default_fields = {
-        'device': NO_VALUE,
-        'network': NO_VALUE,
-        'VM': NO_VALUE,
+        'device': Never(),
+        'network': Never(),
+        'VM': Never(),
         'MAC': '',
         'MTU': '1500',
         'qos_algorithm_type': '',
