@@ -14,7 +14,7 @@ def read(*parts):
 
 setup(
     name='xenzen',
-    version='1.0.1.dev0',
+    version='1.0.2',
     license='MIT',
     url='https://github.com/praekeltfoundation/xenzen',
     description=(
